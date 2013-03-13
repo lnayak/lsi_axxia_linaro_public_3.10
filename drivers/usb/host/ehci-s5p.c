@@ -84,10 +84,15 @@ static void s5p_setup_vbus_gpio(struct platform_device *pdev)
 	if (!gpio_is_valid(gpio))
 		return;
 
-	err = devm_gpio_request_one(dev, gpio, GPIOF_OUT_INIT_HIGH,
+	err = devm_gpio_request_one(dev, gpio, GPIOF_OUT_INIT_LOW,
 				    "ehci_vbus_gpio");
-	if (err)
+	if (err) {
 		dev_err(dev, "can't request ehci vbus gpio %d", gpio);
+		return;
+	}
+
+	mdelay(1);
+	__gpio_set_value(gpio, 1);
 }
 
 static int s5p_ehci_probe(struct platform_device *pdev)
@@ -111,8 +116,6 @@ static int s5p_ehci_probe(struct platform_device *pdev)
 	if (!pdev->dev.coherent_dma_mask)
 		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
-	s5p_setup_vbus_gpio(pdev);
-
 	hcd = usb_create_hcd(&s5p_ehci_hc_driver,
 			     &pdev->dev, dev_name(&pdev->dev));
 	if (!hcd) {
@@ -134,6 +137,8 @@ static int s5p_ehci_probe(struct platform_device *pdev)
 		s5p_ehci->phy = phy;
 		s5p_ehci->otg = phy->otg;
 	}
+
+	s5p_setup_vbus_gpio(pdev);
 
 	s5p_ehci->clk = devm_clk_get(&pdev->dev, "usbhost");
 
