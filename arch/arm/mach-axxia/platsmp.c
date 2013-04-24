@@ -31,6 +31,9 @@ volatile int __cpuinitdata pen_release = -1;
 
 extern void axxia_secondary_startup(void);
 
+#define APB2_SER3_PHY_ADDR    0x002010030000ULL
+#define APB2_SER3_ADDR_SIZE   0x10000
+
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
  * observers, irrespective of whether they're taking part in coherency
@@ -108,7 +111,7 @@ int __cpuinit axxia_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	write_pen_release(phys_cpu);
 
 	/* Wait for so long, then give up if nothing happens ... */
-	timeout = jiffies + (1 * HZ);
+	timeout = jiffies + (10 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 		if (pen_release == -1)
@@ -157,13 +160,25 @@ void __init axxia_smp_init_cpus(void)
 void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int i;
+	void __iomem *apb2_ser3_base;
+	unsigned long resetVal;
+
+	apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
 
 	/*
 	 * Initialise the present map, which describes the set of CPUs
 	 * actually populated at the present time.
 	 */
-	for (i = 0; i < max_cpus; i++)
+	for (i = 0; i < max_cpus; i++) {
+		resetVal = readl(apb2_ser3_base + 0x1010);
 		set_cpu_present(i, true);
+		if (i != 0) {
+			writel(0xab, apb2_ser3_base+0x1000);
+			resetVal &= ~(1 << i);
+			writel(resetVal, apb2_ser3_base+0x1010);
+			udelay(1000);
+		}
+	}
 
 	/*
 	 * This is the entry point of the routine that the secondary
@@ -172,6 +187,8 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 	 */
 	*(u32 *)phys_to_virt(0x10000020) =
 		virt_to_phys(axxia_secondary_startup);
+	smp_wmb();
+	__cpuc_flush_dcache_area((void *)phys_to_virt(0x10000020), sizeof(u32));
 }
 
 struct smp_operations __initdata axxia_smp_ops = {
