@@ -118,7 +118,6 @@
 			     <1 14 0xf08>;
 	};
 
-
 	gpdma@2020140000 {
 		compatible = "lsi,dma32";
 		reg = <0x20 0x20140000 0x00 0x1000>;
@@ -155,12 +154,18 @@
 		reg = <0x20 0x10094000 0 0x1000>;
 	};
 
-        axxia_femac0: femac@0x2010120000 {
-                compatible = "acp-femac";
+	mtc@2010098000 {
+		compatible = "lsi,mtc";
+		reg = <0x20 0x10098000 0 0x3000>;
+		interrupts = <0 45 4>;
+	};
+
+	axxia_femac0: femac@0x2010120000 {
+		compatible = "acp-femac";
 		device_type = "network";
 		reg = <0x20 0x10120000 0 0x1000>,
-		      <0x20 0x10121000 0 0x1000>,
-		      <0x20 0x10122000 0 0x1000>;
+			  <0x20 0x10121000 0 0x1000>,
+			  <0x20 0x10122000 0 0x1000>;
 		interrupts = <0 2 4>,
 		             <0 3 4>,
 		             <0 4 4>;
@@ -171,7 +176,7 @@
 		mac-address = [00 00 00 00 00 00];
 	};
 
-        amba {
+	amba {
 		compatible = "arm,amba-bus";
 		#address-cells = <2>;
 		#size-cells = <2>;
