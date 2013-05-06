@@ -722,6 +722,7 @@ axxia_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	} else {
 		bus = NULL;
 		BUG();
+		printk(KERN_WARNING "PCIE: exceeded number of supported PEI ports\n");
 	}
 
 	return bus;

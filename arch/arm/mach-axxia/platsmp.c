@@ -160,6 +160,8 @@ void __init axxia_smp_init_cpus(void)
 void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int i;
+	int cpu_count = 0;
+	int phys_cpu = 0;
 	void __iomem *apb2_ser3_base;
 	unsigned long resetVal;
 
@@ -169,14 +171,19 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 	 * Initialise the present map, which describes the set of CPUs
 	 * actually populated at the present time.
 	 */
-	for (i = 0; i < max_cpus; i++) {
-		resetVal = readl(apb2_ser3_base + 0x1010);
-		set_cpu_present(i, true);
-		if (i != 0) {
-			writel(0xab, apb2_ser3_base+0x1000);
-			resetVal &= ~(1 << i);
-			writel(resetVal, apb2_ser3_base+0x1010);
-			udelay(1000);
+	for (i = 0; i < NR_CPUS; i++) {
+		/* Check if this is a possible CPU and it is within max_cpus range */
+		if ((cpu_possible(i)) && (cpu_count < max_cpus)) {
+			resetVal = readl(apb2_ser3_base + 0x1010);
+			phys_cpu = cpu_logical_map(i);
+			set_cpu_present(cpu_count, true);
+			if (phys_cpu != 0) {
+				writel(0xab, apb2_ser3_base+0x1000);
+				resetVal &= ~(1 << phys_cpu);
+				writel(resetVal, apb2_ser3_base+0x1010);
+				udelay(1000);
+			}
+			cpu_count++;
 		}
 	}
 
