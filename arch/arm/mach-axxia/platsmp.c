@@ -164,28 +164,38 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 	int phys_cpu = 0;
 	void __iomem *apb2_ser3_base;
 	unsigned long resetVal;
+	struct device_node *np;
 
 	apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
 
-	/*
-	 * Initialise the present map, which describes the set of CPUs
-	 * actually populated at the present time.
-	 */
-	for (i = 0; i < NR_CPUS; i++) {
-		/* Check if this is a possible CPU and it is within max_cpus range */
-		if ((cpu_possible(i)) && (cpu_count < max_cpus)) {
-			resetVal = readl(apb2_ser3_base + 0x1010);
-			phys_cpu = cpu_logical_map(i);
-			set_cpu_present(cpu_count, true);
-			if (phys_cpu != 0) {
-				writel(0xab, apb2_ser3_base+0x1000);
-				resetVal &= ~(1 << phys_cpu);
-				writel(resetVal, apb2_ser3_base+0x1010);
-				udelay(1000);
+	if (of_find_compatible_node(NULL, NULL, "lsi,axm5516")) {
+		apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
+
+		/*
+		 * Initialise the present map, which describes the set of CPUs
+		 * actually populated at the present time.
+		 */
+		for (i = 0; i < NR_CPUS; i++) {
+			/* check if this is a possible CPU and it is within max_cpus range */
+			if ((cpu_possible(i)) && (cpu_count < max_cpus)) {
+				resetVal = readl(apb2_ser3_base + 0x1010);
+				phys_cpu = cpu_logical_map(i);
+				set_cpu_present(cpu_count, true);
+				if (phys_cpu != 0) {
+					writel(0xab, apb2_ser3_base+0x1000);
+					resetVal &= ~(1 << phys_cpu);
+					writel(resetVal, apb2_ser3_base+0x1010);
+					udelay(1000);
+				}
+				cpu_count++;
 			}
-			cpu_count++;
 		}
+	} else if (of_find_compatible_node(NULL, NULL, "lsi,axm5516-sim")) {
+		for (i = 0; i < max_cpus; i++)
+			set_cpu_present(i, true);
 	}
+
+
 
 	/*
 	 * This is the entry point of the routine that the secondary

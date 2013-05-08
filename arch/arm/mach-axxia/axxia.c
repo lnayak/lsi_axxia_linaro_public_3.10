@@ -53,9 +53,9 @@
 
 static const char *axxia_dt_match[] __initconst = {
 	"lsi,axm5516",		/* AXM5516 */
+	"lsi,axm5516-sim",	/* AXM5516 Simulation */
 	NULL
 };
-
 
 static void __iomem *ssp_base;
 
