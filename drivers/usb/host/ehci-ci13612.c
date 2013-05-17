@@ -162,11 +162,9 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 	int irq;
 	int retval;
 	struct device_node *np = pdev->dev.of_node;
-	const int *enabled;
 	struct resource *res;
 
-	enabled = of_get_property(np, "enabled", NULL);
-	if (!enabled || !*enabled)
+	if (!of_device_is_available(np))
 		return -ENODEV;
 
 	if (usb_disabled())
