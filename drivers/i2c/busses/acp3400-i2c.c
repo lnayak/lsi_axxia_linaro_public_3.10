@@ -427,13 +427,11 @@ static int acp34xx_i2c_probe(struct platform_device *dev)
 
 	struct acp3400_i2c *i2c;
 	int result = -ENODEV;
-	const u32 *field;
 
 	if (!np)
 		return -ENODEV;
 
-	field = of_get_property(np, "enabled", NULL);
-	if (!field || (field && (0 == *field)))
+	if (!of_device_is_available(np))
 		return -EINVAL;
 
 	i2c = kzalloc(sizeof(*i2c), GFP_KERNEL);

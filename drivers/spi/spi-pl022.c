@@ -2737,10 +2737,8 @@ pl022_of_probe(struct platform_device *ofdev)
 	int len;
 	struct device_node *of_node = ofdev->dev.of_node;
 	const struct of_device_id *id = of_match_node(pl022_match, of_node);
-	const int *enabled;
 
-	enabled = of_get_property(of_node, "enabled", NULL);
-	if (enabled && !*enabled)
+	if (!of_device_is_available(of_node))
 		return -ENODEV;
 
 	platform_info = kmalloc(sizeof(struct pl022_ssp_controller),

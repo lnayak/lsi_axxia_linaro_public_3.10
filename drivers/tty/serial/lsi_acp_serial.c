@@ -1024,7 +1024,6 @@ acp_serial_add_ports(struct uart_driver *driver)
 	u64 addr = 0;
 	const u32 *reg, *interrupts, *clk, *speed;
 	int baud_rate = 9600;
-	const int *enabled = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(acp_ports); ++i) {
 		if (acp_ports[i] == NULL)
@@ -1043,59 +1042,41 @@ acp_serial_add_ports(struct uart_driver *driver)
 		goto out;
 	}
 
-	np = of_find_node_by_type(np, "serial");
-
-	while (np && !of_device_is_compatible(np, "acp-uart0"))
+	do {
 		np = of_find_node_by_type(np, "serial");
+	} while (np &&
+		(!of_device_is_compatible(np, "acp-uart0")
+		|| !of_device_is_available(np)));
 
-	if (np)
-		enabled = of_get_property(np, "enabled", NULL);
-
-	if (!enabled) {
-		/*
-		  Older LSI U-Boot package (prior to 4.8.1.36).
-
-		  Only use UART0.  The timer registers are defined
-		  differently in the device tree.
-		*/
-		uap->timer_base = ioremap(0x002000408040ULL, 0x20);
-	} else {
+	if (!np) {
 		/*
 		  Newer LSI U-Boot package (4.8.1.36 on).
 
 		  Only use a serial port if it is enabled.
 		*/
-
-		if (!np || (0 == *enabled)) {
-			np = NULL;
+		do {
 			np = of_find_node_by_type(np, "serial");
-
-			while (np && !of_device_is_compatible(np, "acp-uart1"))
-				np = of_find_node_by_type(np, "serial");
-
-			if (np)
-				enabled = of_get_property(np, "enabled", NULL);
-		}
-
-		if (np && (0 != *enabled)) {
-			reg = of_get_property(np, "clock-reg", NULL);
-
-			if (reg) {
-				addr = of_translate_address(np, reg);
-				if (addr == OF_BAD_ADDR)
-					addr = 0;
-			}
-
-			if (addr)
-				uap->timer_base = ioremap(addr, reg[1]);
-			else {
-				printk(KERN_ERR "timer io address not found\n");
-				ret = -ENOMEM;
-			}
-		}
+		} while (np &&
+			(!of_device_is_compatible(np, "acp-uart1")
+			 || !of_device_is_available(np)));
 	}
 
 	if (np) {
+		reg = of_get_property(np, "clock-reg", NULL);
+
+		if (reg) {
+			addr = of_translate_address(np, reg);
+			if (addr == OF_BAD_ADDR)
+				addr = 0;
+		}
+
+		if (addr)
+			uap->timer_base = ioremap(addr, reg[1]);
+		else {
+			printk(KERN_ERR "timer io address not found\n");
+			ret = -ENOMEM;
+		}
+
 		reg = of_get_property(np, "reg", NULL);
 
 		if (reg) {

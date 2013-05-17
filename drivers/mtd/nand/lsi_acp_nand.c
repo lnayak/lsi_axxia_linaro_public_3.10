@@ -3485,11 +3485,8 @@ lsi_nand_init(void)
 		unsigned long nand_length;
 		u64 gpreg_address;
 		unsigned long gpreg_length;
-		const u32 *enabled;
 
-		enabled = of_get_property(np, "enabled", NULL);
-
-		if (!enabled || (enabled && (0 == *enabled))) {
+		if (!of_device_is_available(np)) {
 			printk("ACP NAND Controller Isn't Enabled.\n");
 			return -ENODEV;
 		}
