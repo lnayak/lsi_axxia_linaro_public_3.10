@@ -165,19 +165,43 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 	void __iomem *apb2_ser3_base;
 	unsigned long resetVal;
 	struct device_node *np;
+	unsigned long release_addr[NR_CPUS] = {0};
+	unsigned long release;
 
 	apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
 
 	if (of_find_compatible_node(NULL, NULL, "lsi,axm5516")) {
-		apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
+		for_each_node_by_name(np, "cpu") {
+			if (of_property_read_u32(np, "reg", &phys_cpu))
+				continue;
+
+			if (0 == phys_cpu)
+				continue;
+
+			if (of_property_read_u32(np, "cpu-release-addr",
+						 &release))
+				continue;
+
+			release_addr[phys_cpu] = release;
+			printk(KERN_ERR
+			       "%s:%d - set address for %d to 0x%08x\n",
+			       __FILE__, __LINE__,
+			       phys_cpu, release_addr[phys_cpu]);
+		}
 
 		/*
 		 * Initialise the present map, which describes the set of CPUs
 		 * actually populated at the present time.
 		 */
+
+		apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
+
 		for (i = 0; i < NR_CPUS; i++) {
-			/* check if this is a possible CPU and it is within max_cpus range */
-			if ((cpu_possible(i)) && (cpu_count < max_cpus)) {
+			/* check if this is a possible CPU and
+			 * it is within max_cpus range */
+			if ((cpu_possible(i)) &&
+				(cpu_count < max_cpus) &&
+			    (0 != release_addr[i])) {
 				resetVal = readl(apb2_ser3_base + 0x1010);
 				phys_cpu = cpu_logical_map(i);
 				set_cpu_present(cpu_count, true);
@@ -190,22 +214,35 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 				cpu_count++;
 			}
 		}
+
+		iounmap(apb2_ser3_base);
+
+		/*
+		 * This is the entry point of the routine that the secondary
+		 * cores will execute once they are released from their
+		 * "holding pen".
+		 */
+		*(u32 *)phys_to_virt(release) =
+			virt_to_phys(axxia_secondary_startup);
+		smp_wmb();
+		__cpuc_flush_dcache_area((void *)phys_to_virt(release),
+					 sizeof(u32));
 	} else if (of_find_compatible_node(NULL, NULL, "lsi,axm5516-sim")) {
 		for (i = 0; i < max_cpus; i++)
 			set_cpu_present(i, true);
+
+		/*
+		 * This is the entry point of the routine that the secondary
+		 * cores will execute once they are released from their
+		 * "holding pen".
+		 */
+		*(u32 *)phys_to_virt(0x10000020) =
+			virt_to_phys(axxia_secondary_startup);
+		smp_wmb();
+		__cpuc_flush_dcache_area((void *)phys_to_virt(0x10000020), sizeof(u32));
 	}
 
-
-
-	/*
-	 * This is the entry point of the routine that the secondary
-	 * cores will execute once they are released from their
-	 * "holding pen".
-	 */
-	*(u32 *)phys_to_virt(0x10000020) =
-		virt_to_phys(axxia_secondary_startup);
-	smp_wmb();
-	__cpuc_flush_dcache_area((void *)phys_to_virt(0x10000020), sizeof(u32));
+	return;
 }
 
 struct smp_operations __initdata axxia_smp_ops = {
