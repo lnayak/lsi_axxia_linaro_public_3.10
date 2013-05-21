@@ -633,7 +633,7 @@ __setup_mmu:
 		 * First 1G is RAM, cacheable and bufferable.
 	         */
 
-		ldr	r0, =0x40c1e
+		ldr	r0, =0x40c0e
 		mov	r1, r3
 		add	r2, r3, #0x1000
 1:		mov	r9, #0
