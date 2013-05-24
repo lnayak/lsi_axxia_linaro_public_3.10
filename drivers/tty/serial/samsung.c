@@ -299,7 +299,9 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
  ignore_char:
 		continue;
 	}
+	spin_unlock_irqrestore(&port->lock, flags);
 	tty_flip_buffer_push(tty);
+	return IRQ_HANDLED;
 
  out:
 	spin_unlock_irqrestore(&port->lock, flags);
