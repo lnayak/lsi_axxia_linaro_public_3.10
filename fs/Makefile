@@ -125,4 +125,5 @@ obj-$(CONFIG_F2FS_FS)		+= f2fs/
 obj-y				+= exofs/ # Multiple modules
 obj-$(CONFIG_CEPH_FS)		+= ceph/
 obj-$(CONFIG_PSTORE)		+= pstore/
+obj-$(CONFIG_VMFS_FS)		+= vmfs/
 obj-$(CONFIG_EFIVAR_FS)		+= efivarfs/
