@@ -52,7 +52,12 @@
 	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - PG_DIR_SIZE
 
 	.macro	pgtbl, rd, phys
+#ifdef CONFIG_ARCH_AXXIA
+	ldr	\rd, =(TEXT_OFFSET - PG_DIR_SIZE)
+	add	\rd, \rd, \phys
+#else
 	add	\rd, \phys, #TEXT_OFFSET - PG_DIR_SIZE
+#endif
 	.endm
 
 /*
