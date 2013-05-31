@@ -15,7 +15,7 @@
  */
 /memreserve/ 0x9d000000 0x03000000;
 
-/include/ "skeleton.dtsi"
+#include "skeleton.dtsi"
 
 / {
 	#address-cells = <1>;
