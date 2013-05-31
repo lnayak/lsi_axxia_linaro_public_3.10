@@ -807,7 +807,6 @@ static struct hw_pci __refdata axxia_pcie_hw[] = {
 	[0] = {
 		.nr_controllers = 1,
 		.domain = 0,
-		.swizzle = pci_std_swizzle,
 		.setup = axxia_pcie_setup,
 		.scan = axxia_pcie_scan_bus
 	},
@@ -818,7 +817,6 @@ static struct hw_pci __refdata axxia_pcie_hw[] = {
 	[2] = {
 		.nr_controllers = 1,
 		.domain = 2,
-		.swizzle = pci_std_swizzle,
 		.setup = axxia_pcie_setup,
 		.scan = axxia_pcie_scan_bus
 	}
