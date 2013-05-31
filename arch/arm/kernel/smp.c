@@ -57,7 +57,6 @@ struct secondary_data secondary_data;
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
  */
-volatile int __cpuinitdata pen_release = -1;
 
 enum ipi_msg_type {
 	IPI_WAKEUP,
@@ -118,6 +117,12 @@ int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *idle)
 	return ret;
 }
 
+#ifdef CONFIG_ARCH_AXXIA
+extern void __init smp_init_cpus(void);
+extern void __init platform_smp_prepare_cpus(unsigned int max_cpus);
+extern void __cpuinit platform_secondary_init(unsigned int cpu);
+extern int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle);
+#else
 /* platform specific SMP operations */
 void __init smp_init_cpus(void)
 {
@@ -131,6 +136,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		return smp_ops.smp_boot_secondary(cpu, idle);
 	return -ENOSYS;
 }
+#endif
 
 #ifdef CONFIG_HOTPLUG_CPU
 static void percpu_timer_stop(void);
