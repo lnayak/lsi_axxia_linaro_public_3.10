@@ -188,7 +188,7 @@ static const struct i2c_algorithm ai2c_algorithm = {
  * Device Probe/Setup
  *****************************************************************************/
 
-static int __devinit ai2c_probe(struct platform_device *pdev)
+static int ai2c_probe(struct platform_device *pdev)
 {
 	int                     ai2cStatus = AI2C_ST_SUCCESS;
 	struct ai2c_priv	*priv = NULL;
@@ -291,7 +291,7 @@ exit_release:
 	return ai2cStatus;
 }
 
-static int __devexit ai2c_remove(struct platform_device *dev)
+static int ai2c_remove(struct platform_device *dev)
 {
 	int	 i;
 
@@ -333,7 +333,7 @@ static struct platform_driver ai2c_driver = {
 		.owner  = THIS_MODULE,
 	},
 	.probe      = ai2c_probe,
-	.remove     = __devexit_p(ai2c_remove),
+	.remove     = ai2c_remove,
 	.suspend    = ai2c_suspend,
 	.resume     = ai2c_resume,
 };

@@ -2108,7 +2108,7 @@ pl022_platform_data_dt_get(struct device *dev)
 	return pd;
 }
 
-static int __devinit pl022_probe(
+static int pl022_probe(
 	struct device *dev,
 	struct vendor_data *vendor,
 	struct resource *res,
@@ -2564,7 +2564,7 @@ static struct amba_driver pl022_driver = {
 	},
 	.id_table	= pl022_ids,
 	.probe		= pl022_amba_probe,
-	.remove		= __devexit_p(pl022_amba_remove),
+	.remove		= pl022_amba_remove,
 };
 #else
 static void __iomem *pl022_virtbase;
@@ -2725,8 +2725,7 @@ static void register_spi_device(struct pl022 *pl022)
 
 static struct of_device_id pl022_match[];
 
-static int __devinit
-pl022_of_probe(struct platform_device *ofdev)
+static int pl022_of_probe(struct platform_device *ofdev)
 {
 	struct pl022_ssp_controller *platform_info;
 	int ret = -ENODEV;
@@ -2788,8 +2787,7 @@ err_data:
 	return ret;
 }
 
-static int __devexit
-pl022_of_remove(struct platform_device *ofdev)
+static int pl022_of_remove(struct platform_device *ofdev)
 {
 	struct resource r_mem;
 	int irq;

@@ -281,7 +281,7 @@ static const struct irq_domain_ops pl061_domain_ops = {
 	.xlate	= irq_domain_xlate_twocell,
 };
 
-static int __devinit pl061_probe(struct device *dev,
+static int pl061_probe(struct device *dev,
 	struct resource *res, int irq, struct pl061_gpio **retchip)
 {
 	struct pl061_platform_data *pdata = dev->platform_data;
@@ -457,7 +457,7 @@ static struct amba_driver pl061_gpio_driver = {
 	.probe		= pl061_amba_probe,
 };
 #else
-static int __devinit pl061_of_probe(struct platform_device *ofdev)
+static int pl061_of_probe(struct platform_device *ofdev)
 {
 	struct resource r_mem;
 	struct pl061_platform_data pl061_data = {0};
