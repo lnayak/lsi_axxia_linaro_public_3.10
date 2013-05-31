@@ -1,4 +1,6 @@
-/*
+vers/dma/lsi-dma32.c
+drivers/spi/spi-pl022.c
+drivers/i2c/busses/ai2c/ai2c_mod.c/*
  * drivers/net/ethernet/lsi/lsi_acp_net.c
  *
  * Copyright (C) 2013 LSI
@@ -333,7 +335,7 @@ static int appnic_mii_probe(struct net_device *dev)
  * appnic_mii_init
  */
 
-static int __devinit appnic_mii_init(struct platform_device *pdev,
+static int appnic_mii_init(struct platform_device *pdev,
 				     struct net_device *dev)
 {
 	struct appnic_device *pdata = netdev_priv(dev);
@@ -1755,7 +1757,7 @@ appnic_read_proc(char *page, char **start, off_t offset,
  */
 
 #ifdef CONFIG_OF
-static int __devinit appnic_probe_config_dt(struct net_device *dev,
+static int appnic_probe_config_dt(struct net_device *dev,
 					    struct device_node *np)
 {
 	struct appnic_device *pdata = netdev_priv(dev);
@@ -1864,7 +1866,7 @@ static inline int appnic_probe_config_dt(struct net_device *dev,
  * appnic_drv_probe
  */
 
-static int __devinit appnic_drv_probe(struct platform_device *pdev)
+static int appnic_drv_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	struct device_node *np = pdev->dev.of_node;
@@ -2020,7 +2022,7 @@ out:
  * appnic_drv_remove
  */
 
-static int __devexit appnic_drv_remove(struct platform_device *pdev)
+static int appnic_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct appnic_device *pdata;
@@ -2061,7 +2063,7 @@ MODULE_DEVICE_TABLE(of, appnic_dt_ids);
 
 static struct platform_driver appnic_driver = {
 	.probe = appnic_drv_probe,
-	.remove = __devexit_p(appnic_drv_remove),
+	.remove = appnic_drv_remove,
 	.driver = {
 		.name   = LSI_DRV_NAME,
 		.owner  = THIS_MODULE,

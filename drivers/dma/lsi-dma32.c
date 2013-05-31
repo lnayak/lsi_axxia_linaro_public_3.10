@@ -751,7 +751,7 @@ static const struct of_device_id gpdma_of_ids[] = {
  *
  *
  */
-static int __devinit gpdma_of_probe(struct platform_device *op)
+static int gpdma_of_probe(struct platform_device *op)
 {
 	struct gpdma_engine *engine;
 	struct dma_device   *dma;

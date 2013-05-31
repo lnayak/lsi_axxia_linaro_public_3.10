@@ -728,7 +728,7 @@ axxia_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 }
 
 /* MSI setup */
-static void __devinit axxia_pcie_msi_enable(struct pci_dev *dev)
+static void axxia_pcie_msi_enable(struct pci_dev *dev)
 {
 	u32 pci_higher = 0, msi_lower = 0;
 	u16 flag_val;
