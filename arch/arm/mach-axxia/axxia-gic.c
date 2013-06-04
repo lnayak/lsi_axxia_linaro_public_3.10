@@ -848,8 +848,6 @@ static void gic_cpu_restore(void)
 static int _gic_notifier(struct notifier_block *self,
 			 unsigned long cmd, void *v)
 {
-	int i;
-
 	switch (cmd) {
 	case CPU_PM_ENTER:
 		gic_cpu_save();
