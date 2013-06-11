@@ -9,7 +9,7 @@
 
 typedef struct {
 	union {
-		u32 slock;
+		u32 lock;
 		struct __raw_tickets {
 #ifdef __ARMEB__
 			u16 next;

@@ -157,6 +157,11 @@ config TRACE_IRQFLAGS_SUPPORT
 	bool
 	default y
 
+config GENERIC_LOCKBREAK
+	bool
+	default y
+	depends on SMP
+
 config RWSEM_GENERIC_SPINLOCK
 	def_bool PREEMPT_RT_FULL
 
