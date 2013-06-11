@@ -59,7 +59,7 @@ struct secondary_data secondary_data;
  */
 
 enum ipi_msg_type {
-	IPI_WAKEUP,
+	IPI_WAKEUP = 1,
 	IPI_TIMER,
 	IPI_RESCHEDULE,
 	IPI_CALL_FUNC,
@@ -119,12 +119,6 @@ int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *idle)
 	return ret;
 }
 
-#ifdef CONFIG_ARCH_AXXIA
-extern void __init smp_init_cpus(void);
-extern void __init platform_smp_prepare_cpus(unsigned int max_cpus);
-extern void __cpuinit platform_secondary_init(unsigned int cpu);
-extern int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle);
-#else
 /* platform specific SMP operations */
 void __init smp_init_cpus(void)
 {
@@ -138,7 +132,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		return smp_ops.smp_boot_secondary(cpu, idle);
 	return -ENOSYS;
 }
-#endif
 
 #ifdef CONFIG_HOTPLUG_CPU
 static void percpu_timer_stop(void);
@@ -464,7 +457,7 @@ void arch_send_call_function_single_ipi(int cpu)
 }
 
 static const char *ipi_types[NR_IPI] = {
-#define S(x,s)	[x] = s
+#define S(x,s)	[x - IPI_WAKEUP] = s
 	S(IPI_WAKEUP, "CPU wakeup interrupts"),
 	S(IPI_TIMER, "Timer broadcast interrupts"),
 	S(IPI_RESCHEDULE, "Rescheduling interrupts"),

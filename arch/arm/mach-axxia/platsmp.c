@@ -46,7 +46,7 @@ static void __cpuinit write_pen_release(int val)
 
 static DEFINE_RAW_SPINLOCK(boot_lock);
 
-void __cpuinit platform_secondary_init(unsigned int cpu)
+void __cpuinit axxia_secondary_init(unsigned int cpu)
 {
 	/*
 	 * If this isn't the first physical core in a secondary cluster
@@ -71,7 +71,7 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	_raw_spin_unlock(&boot_lock);
 }
 
-int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
+int __cpuinit axxia_boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 	int phys_cpu, cluster;
@@ -130,7 +130,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
-void __init smp_init_cpus(void)
+void __init axxia_smp_init_cpus(void)
 {
 	int ncores = 0;
 	struct device_node *np;
@@ -154,7 +154,7 @@ void __init smp_init_cpus(void)
 	set_smp_cross_call(axxia_gic_raise_softirq);
 }
 
-void __init platform_smp_prepare_cpus(unsigned int max_cpus)
+void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int i;
 
@@ -172,4 +172,17 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	 */
 	*(u32 *)phys_to_virt(0x10000020) =
 		virt_to_phys(axxia_secondary_startup);
+}
+
+struct smp_operations __initdata axxia_smp_ops = {
+	.smp_init_cpus		= axxia_smp_init_cpus,
+	.smp_prepare_cpus	= axxia_smp_prepare_cpus,
+	.smp_secondary_init	= axxia_secondary_init,
+	.smp_boot_secondary	= axxia_boot_secondary,
+};
+
+void __init axxia_smp_init_ops(void)
+{
+	struct smp_operations *ops = &axxia_smp_ops;
+	smp_set_ops(ops);
 }

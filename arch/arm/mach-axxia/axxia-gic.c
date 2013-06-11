@@ -82,7 +82,7 @@ enum axxia_ext_ipi_num {
 	IPI3_CPU3,
 	MAX_AXM_IPI_NUM
 };
-static u32 mplx_ipi_num_45;
+static u32 mplx_ipi_num_457;
 static u32 mplx_ipi_num_61;
 
 union gic_base {
@@ -524,7 +524,7 @@ asmlinkage void __exception_irq_entry axxia_gic_handle_irq(struct pt_regs *regs)
 			case IPI2_CPU1:
 			case IPI2_CPU2:
 			case IPI2_CPU3:
-				ipinum = mplx_ipi_num_45; /* 4 or 5 */
+				ipinum = mplx_ipi_num_457; /* 4 or 5 or 7*/
 				break;
 
 			case IPI3_CPU0:
@@ -1105,8 +1105,9 @@ void axxia_gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 
 	case 4: /* IPI_CALL_FUNC */
 	case 5: /* IPI_CALL_FUNC_SINGLE */
+	case 7: /* IPI_BACKTRACE */
 		regoffset += 0x8; /* Axxia IPI2 */
-		mplx_ipi_num_45 = irq;
+		mplx_ipi_num_457 = irq;
 		break;
 
 	case 6: /* IPI_CPU_STOP */

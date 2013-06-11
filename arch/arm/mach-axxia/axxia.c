@@ -251,6 +251,7 @@ static void axxia_restart(char str, const char *cmd)
 
 DT_MACHINE_START(AXXIA_DT, "LSI Axxia")
 	.dt_compat	= axxia_dt_match,
+	.smp_init	= smp_init_ops(axxia_smp_init_ops),
 	.map_io		= axxia_dt_map_io,
 	.init_early	= axxia_dt_init_early,
 	.init_irq	= axxia_dt_init_irq,
