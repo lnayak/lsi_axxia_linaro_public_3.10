@@ -110,6 +110,11 @@ int __cpuinit axxia_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	/* Release the specified core */
 	write_pen_release(phys_cpu);
 
+#ifdef CONFIG_HOTPLUG_CPU
+	/* Send a wakeup IPI to get the idled cpu out of WFI state */
+	axxia_gic_raise_softirq(cpumask_of(cpu), 1);
+#endif
+
 	/* Wait for so long, then give up if nothing happens ... */
 #ifdef CONFIG_ARCH_AXXIA_SIM
 	timeout = jiffies + (1 * HZ);
