@@ -299,7 +299,9 @@ s3c24xx_serial_rx_chars(int irq, void *dev_id)
  ignore_char:
 		continue;
 	}
+	spin_unlock_irqrestore(&port->lock, flags);
 	tty_flip_buffer_push(tty);
+	return IRQ_HANDLED;
 
  out:
 	spin_unlock_irqrestore(&port->lock, flags);
@@ -1010,6 +1012,9 @@ static void s3c24xx_serial_resetport(struct uart_port *port,
 	/* reset both fifos */
 	wr_regl(port, S3C2410_UFCON, cfg->ufcon | S3C2410_UFCON_RESETBOTH);
 	wr_regl(port, S3C2410_UFCON, cfg->ufcon);
+
+	wr_regl(port, S3C64XX_UINTM, 0xf);
+	wr_regl(port, S3C64XX_UINTP, 0xf);
 
 	/* some delay is required after fifo reset */
 	udelay(1);

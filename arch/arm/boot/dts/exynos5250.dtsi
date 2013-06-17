@@ -47,10 +47,15 @@
 	};
 
 	gic:interrupt-controller@10481000 {
-		compatible = "arm,cortex-a9-gic";
+		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
 		#interrupt-cells = <3>;
+		#address-cells = <0>;
 		interrupt-controller;
-		reg = <0x10481000 0x1000>, <0x10482000 0x2000>;
+		reg = <0x10481000 0x1000>,
+		      <0x10482000 0x2000>,
+		      <0x10484000 0x2000>,
+		      <0x10486000 0x2000>;
+		interrupts = <1 9 0xf04>;
 	};
 
 	combiner:interrupt-controller@10440000 {
@@ -79,6 +84,29 @@
 		compatible = "samsung,mfc-v6";
 		reg = <0x11000000 0x10000>;
 		interrupts = <0 96 0>;
+	};
+
+	usbphy {
+		compatible = "samsung,exynos5250-usbphy";
+		reg = <0x12130000 0x100>, <0x12100000 0x100>;
+	};
+
+	usb@12000000 {
+		compatible = "samsung,exynos-dwc3";
+		reg = <0x12000000 0x10000>;
+		interrupts = <0 72 0>;
+	};
+
+	ohci {
+		compatible = "samsung,exynos-ohci";
+		reg = <0x12120000 0x100>;
+		interrupts = <0 71 0>;
+	};
+
+	ehci {
+		compatible = "samsung,exynos-ehci";
+		reg = <0x12110000 0x100>;
+		interrupts = <0 71 0>;
 	};
 
 	rtc {
@@ -268,6 +296,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
+
 
 	amba {
 		#address-cells = <1>;
