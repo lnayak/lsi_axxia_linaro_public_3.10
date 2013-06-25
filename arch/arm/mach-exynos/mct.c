@@ -24,6 +24,7 @@
 #include <asm/arch_timer.h>
 #include <asm/hardware/gic.h>
 #include <asm/localtimer.h>
+#include <asm/arch_timer.h>
 
 #include <plat/cpu.h>
 
@@ -159,6 +160,10 @@ struct clocksource mct_frc = {
 static void __init exynos4_clocksource_init(void)
 {
 	exynos4_mct_frc_start(0, 0);
+
+	if (soc_is_exynos5250()) {
+		mct_frc.rating = 399;
+	}
 
 	if (clocksource_register_hz(&mct_frc, clk_rate))
 		panic("%s: can't register clocksource\n", mct_frc.name);
@@ -493,6 +498,9 @@ static void __init exynos_timer_init(void)
 	exynos4_timer_resources();
 	exynos4_clocksource_init();
 	exynos4_clockevent_init();
+
+	if (arch_timer_of_register() != 0)
+		pr_err("Error registering architected timers\n");
 }
 
 struct sys_timer exynos4_timer = {
