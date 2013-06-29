@@ -115,7 +115,7 @@ static int __init exynos_sata_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sata->sclk);
 		goto err3;
 	}
-	clk_enable(sata->sclk);
+	clk_prepare_enable(sata->sclk);
 
 	clk_set_rate(sata->sclk, sata->freq * MHZ);
 
@@ -125,7 +125,7 @@ static int __init exynos_sata_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sata->clk);
 		goto err4;
 	}
-	clk_enable(sata->clk);
+	clk_prepare_enable(sata->clk);
 
 	/*  Get a gen 3 PHY controller */
 

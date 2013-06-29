@@ -20,6 +20,17 @@
 		reg = <0x40000000 0x80000000>;
 	};
 
+	i2c@121D0000 {
+		samsung,i2c-sda-delay = <100>;
+		samsung,i2c-max-bus-freq = <40000>;
+		samsung,i2c-slave-addr = <0x38>;
+
+		sata-phy {
+			compatible = "samsung,sata-phy";
+			reg = <0x38>;
+		};
+	};
+
 	chosen {
 		bootargs = "console=ttySAC2,115200";
 	};
@@ -311,10 +322,6 @@
 	};
 
 	i2c@12CD0000 {
-		status = "disabled";
-	};
-
-	i2c@121D0000 {
 		status = "disabled";
 	};
 

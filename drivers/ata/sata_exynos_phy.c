@@ -79,7 +79,7 @@ static int sataphy_init(struct sata_phy *phy)
 
 	sata_phy = (struct exynos_sata_phy *)phy->priv_data;
 
-	clk_enable(sata_phy->clk);
+	clk_prepare_enable(sata_phy->clk);
 
 	if (sata_is_reg(sata_phy->mmio , EXYNOS5_SATA_CTRL0,
 		CTRL0_P0_PHY_CALIBRATED, CTRL0_P0_PHY_CALIBRATED))
