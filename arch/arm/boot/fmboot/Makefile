@@ -7,8 +7,7 @@ DTC = $(obj)/../../../../scripts/dtc/dtc
 DTS = $(obj)/../dts/axm55xxsim.dts
 ZIMAGE = $(obj)/../zImage
 
-clean:
-	rm -f $(obj)/../linux.img $(obj)/fmboot.o $(obj)/zImage.fm $(obj)/axm55xxsim.dtb
+clean-files := fmboot.o zImage.fm axm55xxsim.dtb
 
 arch/arm/boot/linux.img: $(obj)/fmboot.o $(srctree)/$(obj)/fmboot.lds $(obj)/zImage.fm
 	cd $(obj) && $(LD) -o ../linux.img --script=$(srctree)/$(obj)/fmboot.lds
