@@ -53,8 +53,13 @@ $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 
 $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
 	$(call if_changed,objcopy)
-ifeq ($(MACHINE),arch/arm/mach-axxia/)
-		$(Q)$(MAKE) $(build)=$(obj)/fmboot $(obj)/linux.img
+
+ifeq ($(CONFIG_ARCH_AXXIA),y)
+ifeq ($(CONFIG_ARCH_AXXIA_SIM),y)
+	$(Q)$(MAKE) $(build)=$(obj)/fmboot $(obj)/linux.img
+else
+	$(Q)$(MAKE) $(build)=$(obj)/emuboot $(obj)/emuboot/linux.img
+endif
 endif
 	@$(kecho) '  Kernel: $@ is ready'
 
@@ -118,4 +123,4 @@ i:
 	$(CONFIG_SHELL) $(srctree)/$(src)/install.sh $(KERNELRELEASE) \
 	$(obj)/Image System.map "$(INSTALL_PATH)"
 
-subdir-	    := bootp compressed dts fmboot
+subdir-	    := bootp compressed dts fmboot emuboot
