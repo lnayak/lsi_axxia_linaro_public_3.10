@@ -1,28 +1,15 @@
 # Build an image for emulation.
 
-AS		= $(CROSS_COMPILE)gcc -c
-LD		= $(CROSS_COMPILE)ld
-OBJCOPY         = $(CROSS_COMPILE)objcopy
+OBJCOPY = $(CROSS_COMPILE)objcopy
+DTC = $(obj)/../../../../scripts/dtc/dtc
+DTS = $(obj)/../dts/axm55xx-emu.dts
 
-DTC = ../../../../scripts/dtc/dtc
-DTS = ../dts/axm55xx.dts
-ZIMAGE = ../zImage
+clean-files := vmlinux.bin* linux.img axm55xx-emu.dtb
 
-all: clean linux.img
+$(obj)/linux.img: $(obj)/axm55xx-emu.dtb $(obj)/../../../../vmlinux
+	$(OBJCOPY) -O binary -R .note -R .comment -S $(obj)/../../../../vmlinux $(obj)/vmlinux.bin
+	gzip -f -9 $(obj)/vmlinux.bin
+	mkimage -f $(obj)/axm55xx-emu.its $@
 
-clean:
-	rm -f linux.img emuboot.o zImage.emu axm55xx.dtb
-
-linux.img: emuboot.o emuboot.lds zImage.emu
-	$(LD) -o linux.tmp --script=emuboot.lds
-	$(OBJCOPY) -O binary -R .note -R .comment -S linux.tmp $@
-	rm -f linux.tmp
-
-zImage.emu: $(ZIMAGE) axm55xx.dtb
-	python pack.py $(ZIMAGE) axm55xx.dtb > $@
-
-axm55xx.dtb: $(DTS)
-	$(DTC) -O dtb -o $@ $<
-
-emuboot.o: emuboot.S
-	$(AS) -o $@ $<
+$(obj)/axm55xx-emu.dtb: $(DTS)
+	$(DTC) -O dtb -R 32 -p 0x400 -o $@ $<

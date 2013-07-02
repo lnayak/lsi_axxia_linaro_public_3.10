@@ -1,5 +1,5 @@
 /*
- * arch/arm/boot/dts/axm5500-sim.dts
+ * arch/arm/boot/dts/axm5500-emu.dts
  *
  * Copyright (C) 2012 LSI
  *
@@ -67,7 +67,6 @@
 			cpu-release-addr = <0>; // Fixed by the boot loader
 		};
 
-		/*
 		cpu@4 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a15";
@@ -88,7 +87,13 @@
 			reg = <6>;
 			cpu-release-addr = <0>; // Fixed by the boot loader
 		};
-		*/
+
+		cpu@7 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a15";
+			reg = <7>;
+			cpu-release-addr = <0>; // Fixed by the boot loader
+		};
 	};
 
 	memory@00000000 {
@@ -112,6 +117,7 @@
 		interrupts = <1 13 0xf08>,
 			     <1 14 0xf08>;
 	};
+
 
 	gpdma@2020140000 {
 		compatible = "lsi,dma32";
@@ -149,8 +155,8 @@
 		reg = <0x20 0x10094000 0 0x1000>;
 	};
 
-	axxia_femac0: femac@0x2010120000 {
-		compatible = "acp-femac";
+        axxia_femac0: femac@0x2010120000 {
+                compatible = "acp-femac";
 		device_type = "network";
 		reg = <0x20 0x10120000 0 0x1000>,
 		      <0x20 0x10121000 0 0x1000>,
@@ -165,7 +171,7 @@
 		mac-address = [00 00 00 00 00 00];
 	};
 
-	amba {
+        amba {
 		compatible = "arm,amba-bus";
 		#address-cells = <2>;
 		#size-cells = <2>;
