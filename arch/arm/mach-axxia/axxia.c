@@ -44,9 +44,9 @@
 #include <asm/mach/map.h>
 #include <asm/mach/time.h>
 #include <asm/hardware/cache-l2x0.h>
-#include <asm/hardware/gic.h>
 #include <mach/timers.h>
 #include <mach/axxia-gic.h>
+#include <linux/irqchip/arm-gic.h>
 #include "axxia.h"
 #include "pci.h"
 #include "i2c.h"
@@ -63,21 +63,22 @@ void __init axxia_dt_map_io(void)
 {
 }
 
+
 void __init axxia_dt_init_early(void)
 {
 }
 
 static struct of_device_id axxia_irq_match[] __initdata = {
-	{
-		.compatible = "arm,cortex-a15-gic",
-		.data = gic_of_init,
-	},
-	{ }
+    {
+        .compatible = "arm,cortex-a15-gic",
+        .data = gic_of_init,
+    },
+    { }
 };
 
 static void __init axxia_dt_init_irq(void)
 {
-	of_irq_init(axxia_irq_match);
+    of_irq_init(axxia_irq_match);
 }
 
 void __init axxia_dt_timer_init(void)
@@ -89,12 +90,7 @@ void __init axxia_dt_timer_init(void)
 	axxia_init_clocks();
 
 #ifdef CONFIG_ARM_ARCH_TIMER
-	{
-		int err = arch_timer_of_register();
-		if (err == 0)
-			err = arch_timer_sched_clock_init();
-		WARN_ON(err);
-	}
+	clocksource_of_init();
 #endif
 
 	if (of_property_read_string(of_aliases, "timer", &path)) {
@@ -110,16 +106,12 @@ void __init axxia_dt_timer_init(void)
 	if (WARN_ON(base == NULL))
 		return;
 
-	__sp804_clocksource_and_sched_clock_init(base, "axxia-timer0", 0);
+	sp804_clocksource_and_sched_clock_init(base, "axxia-timer0");
+
 	sp804_clockevents_init(base + 0x20,
 			       irq_of_parse_and_map(node, 1),
 			       "axxia-timer1");
 }
-
-
-static struct sys_timer axxia_dt_timer = {
-	.init = axxia_dt_timer_init,
-};
 
 static struct mmci_platform_data mmc_plat_data = {
 	.ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34,
@@ -251,7 +243,7 @@ DT_MACHINE_START(AXXIA_DT, "LSI Axxia")
 	.map_io		= axxia_dt_map_io,
 	.init_early	= axxia_dt_init_early,
 	.init_irq	= axxia_dt_init_irq,
-	.timer		= &axxia_dt_timer,
+	.init_time	= axxia_dt_timer_init,
 	.init_machine	= axxia_dt_init,
 	.handle_irq	= axxia_gic_handle_irq,
 	.restart	= axxia_restart,
