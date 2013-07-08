@@ -18,7 +18,7 @@
 #include <linux/of_fdt.h>
 #include <asm/smp_plat.h>
 #include <asm/cacheflush.h>
-#include <asm/hardware/gic.h>
+#include <linux/irqchip/arm-gic.h>
 #include <asm/mach/map.h>
 
 #include <mach/axxia-gic.h>
@@ -252,8 +252,10 @@ struct smp_operations __initdata axxia_smp_ops = {
 	.smp_boot_secondary	= axxia_boot_secondary,
 };
 
-void __init axxia_smp_init_ops(void)
+bool __init axxia_smp_init_ops(void)
 {
 	struct smp_operations *ops = &axxia_smp_ops;
 	smp_set_ops(ops);
+
+	return true;
 }
