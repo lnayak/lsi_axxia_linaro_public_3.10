@@ -107,10 +107,6 @@ void __init axxia_dt_timer_init(void)
 		return;
 
 	sp804_clocksource_and_sched_clock_init(base, "axxia-timer0");
-
-	sp804_clockevents_init(base + 0x20,
-			       irq_of_parse_and_map(node, 1),
-			       "axxia-timer1");
 }
 
 static struct mmci_platform_data mmc_plat_data = {
