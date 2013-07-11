@@ -286,7 +286,7 @@ static int pl061_probe(struct device *dev,
 {
 	struct pl061_platform_data *pdata = dev->platform_data;
 	struct pl061_gpio *chip;
-	int ret, irq, i, irq_base;
+	int ret, i, irq_base;
 
 	chip = devm_kzalloc(dev, sizeof(*chip), GFP_KERNEL);
 	if (chip == NULL)
@@ -321,7 +321,7 @@ static int pl061_probe(struct device *dev,
 		return -ENOMEM;
 	}
 
-	chip->domain = irq_domain_add_simple(adev->dev.of_node, PL061_GPIO_NR,
+	chip->domain = irq_domain_add_simple(dev->of_node, PL061_GPIO_NR,
 					     irq_base, &pl061_domain_ops, chip);
 	if (!chip->domain)
 		return -ENODEV;
