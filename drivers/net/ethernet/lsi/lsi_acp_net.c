@@ -1321,7 +1321,7 @@ dump_registers(struct net_device *device)
 
 		value = readl(rx_registers[i]);
 		printk(KERN_ERR
-		       "0x%08lx: 0x%08lx\n", rx_registers[i], value);
+		       "0x%08lx: 0x%08lx\n", (unsigned long)rx_registers[i], value);
 	}
 
 	/*
@@ -1336,7 +1336,7 @@ dump_registers(struct net_device *device)
 
 		value = readl(tx_registers[i]);
 		printk(KERN_ERR
-		       "0x%08x: 0x%08x\n", tx_registers[i], value);
+		       "0x%08lx: 0x%08lx\n", (unsigned long)tx_registers[i], value);
 	}
 
 	/*
@@ -2050,7 +2050,6 @@ static int phy_enable_(struct net_device *device)
 	appnic_device_t *apnd = netdev_priv(device);
 	phy_id_high_t phy_id_high_;
 	phy_id_low_t phy_id_low_;
-	unsigned char phyaddr_string_[40];
 
 	if (0 == phy_read_(apnd->phy_address, PHY_ID_HIGH, &phy_id_high_.raw)) {
 		PHY_DEBUG_PRINT("Read PHY_ID_HIGH as 0x%x on mdio addr 0x%x.\n",
@@ -3180,9 +3179,10 @@ appnic_init(struct net_device *device)
 		adapter->rx_tail = (appnic_queue_pointer_t *) dma_offset_;
 		adapter->rx_tail_dma = (int) adapter->rx_tail -
 			(int) adapter->dma_alloc_offset;
-		printk("%s:%d - rx_tail=0x%08x rx_tail_dma=0x%08x\n",
-		       __FILE__, __LINE__,
-		       adapter->rx_tail, adapter->rx_tail_dma); /* ZZZ */
+		printk("%s:%d - rx_tail=0x%08lx rx_tail_dma=0x%08lx\n",
+				__FILE__, __LINE__,
+				(unsigned long)adapter->rx_tail
+				,(unsigned long)adapter->rx_tail_dma); /* ZZZ */
 		dma_offset_ += sizeof(appnic_queue_pointer_t);
 		memset((void *) adapter->rx_tail, 0,
 		       sizeof(appnic_queue_pointer_t));
@@ -3558,9 +3558,10 @@ lsinet_init(void)
 	struct device_node *np = NULL;
 	const u32 *field;
 	appnic_device_t *appnic_device;
+#ifndef CONFIG_ARM
 	u64 value64;
-	u64 dt_size;
 	u32 value32;
+#endif
 	int length;
 
 	TRACE_BEGINNING();
@@ -3706,8 +3707,10 @@ device_tree_succeeded:
 	}
 
 	/* Create the /proc entry. */
-	create_proc_read_entry("driver/appnic", 0, NULL,
-				appnic_read_proc_, NULL);
+	if (!proc_create_data("driver/appnic", 0, NULL,
+				appnic_read_proc_, NULL))
+		printk(KERN_WARNING "%s:%d - unable to create /proc entry\n",
+	       __FILE__, __LINE__);
 
 out:
 

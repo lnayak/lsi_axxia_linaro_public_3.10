@@ -1157,7 +1157,7 @@ err_no_rxchan:
 
 static int pl022_dma_autoprobe(struct pl022 *pl022)
 {
-	struct device *dev = &pl022->adev->dev;
+	struct device *dev = &pl022->dev;
 
 	/* automatically configure DMA channels from platform, normally using DT */
 	pl022->dma_rx_channel = dma_request_slave_channel(dev, "rx");
