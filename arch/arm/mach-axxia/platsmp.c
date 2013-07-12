@@ -133,7 +133,7 @@ int __cpuinit axxia_boot_secondary(unsigned int cpu, struct task_struct *idle)
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
-void __init axxia_smp_init_cpus(void)
+static void __init axxia_smp_init_cpus(void)
 {
 	int ncores = 0;
 	struct device_node *np;
@@ -157,16 +157,16 @@ void __init axxia_smp_init_cpus(void)
 	set_smp_cross_call(axxia_gic_raise_softirq);
 }
 
-void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
+static void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int i;
 	int cpu_count = 0;
-	int phys_cpu = 0;
+	u32 phys_cpu = 0;
 	void __iomem *apb2_ser3_base;
 	unsigned long resetVal;
 	struct device_node *np;
 	unsigned long release_addr[NR_CPUS] = {0};
-	unsigned long release;
+	u32 release;
 
 	apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
 
@@ -184,7 +184,7 @@ void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 
 			release_addr[phys_cpu] = release;
 			printk(KERN_ERR
-			       "%s:%d - set address for %d to 0x%08x\n",
+			       "%s:%d - set address for %d to 0x%08lx\n",
 			       __FILE__, __LINE__,
 			       phys_cpu, release_addr[phys_cpu]);
 		}
