@@ -306,7 +306,9 @@ __create_page_tables:
 	orr	r3, r3, #PMD_SECT_XN
 	str	r3, [r0], #4
 #endif
-
+#ifdef CONFIG_ARCH_AXXIA
+	orr	r7, r7, #0x20
+#endif
 #else /* CONFIG_DEBUG_ICEDCC || CONFIG_DEBUG_SEMIHOSTING */
 	/* we don't need any serial debugging mappings */
 	ldr	r7, [r10, #PROCINFO_IO_MMUFLAGS] @ io_mmuflags

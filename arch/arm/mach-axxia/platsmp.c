@@ -190,8 +190,6 @@ static void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 	unsigned long release_addr[NR_CPUS] = {0};
 	u32 release;
 
-	apb2_ser3_base = ioremap(APB2_SER3_PHY_ADDR, APB2_SER3_ADDR_SIZE);
-
 	if (of_find_compatible_node(NULL, NULL, "lsi,axm5516")) {
 		for_each_node_by_name(np, "cpu") {
 			if (of_property_read_u32(np, "reg", &phys_cpu))
