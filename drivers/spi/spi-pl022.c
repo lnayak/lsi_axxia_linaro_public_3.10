@@ -2377,7 +2377,7 @@ static void pl022_suspend_resources(struct pl022 *pl022, bool runtime)
 	if (!IS_ERR(pins_state)) {
 		ret = pinctrl_select_state(pl022->pinctrl, pins_state);
 		if (ret)
-			dev_err(&pl022->dev, "could not set %s pins\n",
+			dev_err(&pl022->dev->dev, "could not set %s pins\n",
 				runtime ? "idle" : "sleep");
 	}
 }
@@ -2391,7 +2391,7 @@ static void pl022_resume_resources(struct pl022 *pl022, bool runtime)
 	if (!IS_ERR(pl022->pins_default)) {
 		ret = pinctrl_select_state(pl022->pinctrl, pl022->pins_default);
 		if (ret)
-			dev_err(&pl022->dev,
+			dev_err(&pl022->dev->dev,
 				"could not set default pins\n");
 	}
 
@@ -2401,7 +2401,7 @@ static void pl022_resume_resources(struct pl022 *pl022, bool runtime)
 			ret = pinctrl_select_state(pl022->pinctrl,
 					pl022->pins_idle);
 		if (ret)
-			dev_err(&pl022->dev,
+			dev_err(&pl022->dev->dev,
 				"could not set idle pins\n");
 		}
 	}
@@ -2500,7 +2500,7 @@ static struct vendor_data vendor_st_pl023 = {
 };
 
 static int __init
-pl022_amba_probe(struct amba_device *adev, struct amba_id *id)
+pl022_amba_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct pl022 *pl022 = NULL;
 	int ret;
