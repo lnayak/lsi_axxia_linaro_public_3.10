@@ -222,7 +222,7 @@ acp_wrappers_init(void)
 	mdio_address = of_translate_address(np, field);
 	mdio_size = field[1];
 	mdio_base = (unsigned long)ioremap(mdio_address, mdio_size);
-	printk(KERN_INFO "%s:%d - mdio_address=0x%llx mdio_size=0x%x mdio_base=0x%x\n",
+	printk(KERN_INFO "%s:%d - mdio_address=0x%llx mdio_size=0x%x mdio_base=0x%lx\n",
 	       __FILE__, __LINE__, mdio_address, mdio_size, mdio_base);
 	rc = acp_mdio_initialize();
 #else
