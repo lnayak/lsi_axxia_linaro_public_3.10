@@ -235,6 +235,7 @@
 		compatible = "samsung,exynos5-sata-ahci";
 		reg = <0x122F0000 0x1ff>;
 		interrupts = <0 115 0>;
+		samsung,sata-freq = <66>;
 		clocks = <&clock 277>, <&clock 143>;
 		clock-names = "sata", "sclk_sata";
 	};
@@ -242,6 +243,8 @@
 	sata-phy@12170000 {
 		compatible = "samsung,exynos5-sata-phy";
 		reg = <0x12170000 0x1ff>;
+		clocks = <&clock 0x11f>;
+		clock-names = "sata-phy";
 	};
 
 	i2c_0: i2c@12C60000 {
