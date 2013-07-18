@@ -8,6 +8,7 @@ clean-files := vmlinux.bin* linux.img axm55xx-emu.dtb
 
 $(obj)/linux.img: $(obj)/axm55xx-emu.dtb $(obj)/../../../../vmlinux
 	$(OBJCOPY) -O binary -R .note -R .comment -S $(obj)/../../../../vmlinux $(obj)/vmlinux.bin
+	test -f $(obj)/axm55xx-emu.its || cp $(srctree)/$(obj)/axm55xx-emu.its $(obj)
 	gzip -f -9 $(obj)/vmlinux.bin
 	mkimage -f $(obj)/axm55xx-emu.its $@
 
