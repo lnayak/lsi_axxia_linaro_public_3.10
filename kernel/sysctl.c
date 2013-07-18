@@ -393,6 +393,15 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 	},
 #endif /* CONFIG_NUMA_BALANCING */
+#ifdef CONFIG_NO_HZ_FULL
+	{
+		.procname	= "sched_tick_max_deferment",
+		.data		= &sysctl_sched_tick_max_deferment,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+#endif /* CONFIG_NO_HZ_FULL */
 #endif /* CONFIG_SCHED_DEBUG */
 	{
 		.procname	= "sched_rt_period_us",

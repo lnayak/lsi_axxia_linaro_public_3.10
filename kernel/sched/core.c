@@ -2764,12 +2764,16 @@ void scheduler_tick(void)
  * balancing, etc... continue to move forward, even
  * with a very low granularity.
  */
+unsigned int sysctl_sched_tick_max_deferment = HZ;
 u64 scheduler_tick_max_deferment(void)
 {
 	struct rq *rq = this_rq();
 	unsigned long next, now = ACCESS_ONCE(jiffies);
 
-	next = rq->last_sched_tick + HZ;
+	if (sysctl_sched_tick_max_deferment == -1)
+		return KTIME_MAX;
+
+	next = rq->last_sched_tick + sysctl_sched_tick_max_deferment;
 
 	if (time_before_eq(next, now))
 		return 0;
