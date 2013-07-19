@@ -374,7 +374,9 @@ static void sched_debug_header(struct seq_file *m)
 	PN(sysctl_sched_wakeup_granularity);
 	P(sysctl_sched_child_runs_first);
 	P(sysctl_sched_features);
+#ifdef CONFIG_NO_HZ_FULL
 	P(sysctl_sched_tick_max_deferment);
+#endif
 #undef PN
 #undef P
 
