@@ -26,8 +26,8 @@ struct vmfs_fattr {
 	unsigned long f_ino;
 	umode_t f_mode;
 	nlink_t f_nlink;
-	uid_t f_uid;
-	gid_t f_gid;
+	kuid_t f_uid;
+	kgid_t f_gid;
 	dev_t f_rdev;
 	loff_t f_size;
 	struct timespec f_atime;
