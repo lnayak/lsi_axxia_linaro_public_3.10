@@ -313,7 +313,7 @@ static struct samsung_pwm_variant exynos4_pwm_variant = {
 
 void exynos4_restart(char mode, const char *cmd)
 {
-	__raw_writel(0x1, S5P_SWRESET);
+	writel_relaxed(0x1, S5P_SWRESET);
 }
 
 void exynos5_restart(char mode, const char *cmd)
@@ -330,10 +330,10 @@ void exynos5_restart(char mode, const char *cmd)
 		np = of_find_compatible_node(NULL, NULL, "samsung,exynos5440-clock");
 
 		addr = of_iomap(np, 0) + 0xbc;
-		status = __raw_readl(addr);
+		status = readl_relaxed(addr);
 
 		addr = of_iomap(np, 0) + 0xcc;
-		val = __raw_readl(addr);
+		val = readl_relaxed(addr);
 
 		val = (val & 0xffff0000) | (status & 0xffff);
 	} else {
@@ -341,7 +341,7 @@ void exynos5_restart(char mode, const char *cmd)
 		return;
 	}
 
-	__raw_writel(val, addr);
+	writel_relaxed(val, addr);
 }
 
 void __init exynos_init_late(void)
@@ -567,7 +567,7 @@ static int __init exynos4_l2x0_cache_init(void)
 		return 0;
 	}
 
-	if (!(__raw_readl(S5P_VA_L2CC + L2X0_CTRL) & 0x1)) {
+	if (!(readl_relaxed(S5P_VA_L2CC + L2X0_CTRL) & 0x1)) {
 		l2x0_saved_regs.phy_base = EXYNOS4_PA_L2CC;
 		/* TAG, Data Latency Control: 2 cycles */
 		l2x0_saved_regs.tag_latency = 0x110;
@@ -583,17 +583,17 @@ static int __init exynos4_l2x0_cache_init(void)
 
 		l2x0_regs_phys = virt_to_phys(&l2x0_saved_regs);
 
-		__raw_writel(l2x0_saved_regs.tag_latency,
+		writel_relaxed(l2x0_saved_regs.tag_latency,
 				S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
-		__raw_writel(l2x0_saved_regs.data_latency,
+		writel_relaxed(l2x0_saved_regs.data_latency,
 				S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
 
 		/* L2X0 Prefetch Control */
-		__raw_writel(l2x0_saved_regs.prefetch_ctrl,
+		writel_relaxed(l2x0_saved_regs.prefetch_ctrl,
 				S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
 
 		/* L2X0 Power Control */
-		__raw_writel(l2x0_saved_regs.pwr_ctrl,
+		writel_relaxed(l2x0_saved_regs.pwr_ctrl,
 				S5P_VA_L2CC + L2X0_POWER_CTRL);
 
 		clean_dcache_area(&l2x0_regs_phys, sizeof(unsigned long));
@@ -722,9 +722,9 @@ static inline void exynos_irq_eint_mask(struct irq_data *data)
 	u32 mask;
 
 	spin_lock(&eint_lock);
-	mask = __raw_readl(EINT_MASK(exynos_eint_base, data->irq));
+	mask = readl_relaxed(EINT_MASK(exynos_eint_base, data->irq));
 	mask |= EINT_OFFSET_BIT(data->irq);
-	__raw_writel(mask, EINT_MASK(exynos_eint_base, data->irq));
+	writel_relaxed(mask, EINT_MASK(exynos_eint_base, data->irq));
 	spin_unlock(&eint_lock);
 }
 
@@ -733,15 +733,15 @@ static void exynos_irq_eint_unmask(struct irq_data *data)
 	u32 mask;
 
 	spin_lock(&eint_lock);
-	mask = __raw_readl(EINT_MASK(exynos_eint_base, data->irq));
+	mask = readl_relaxed(EINT_MASK(exynos_eint_base, data->irq));
 	mask &= ~(EINT_OFFSET_BIT(data->irq));
-	__raw_writel(mask, EINT_MASK(exynos_eint_base, data->irq));
+	writel_relaxed(mask, EINT_MASK(exynos_eint_base, data->irq));
 	spin_unlock(&eint_lock);
 }
 
 static inline void exynos_irq_eint_ack(struct irq_data *data)
 {
-	__raw_writel(EINT_OFFSET_BIT(data->irq),
+	writel_relaxed(EINT_OFFSET_BIT(data->irq),
 		     EINT_PEND(exynos_eint_base, data->irq));
 }
 
@@ -788,10 +788,10 @@ static int exynos_irq_eint_set_type(struct irq_data *data, unsigned int type)
 	mask = 0x7 << shift;
 
 	spin_lock(&eint_lock);
-	ctrl = __raw_readl(EINT_CON(exynos_eint_base, data->irq));
+	ctrl = readl_relaxed(EINT_CON(exynos_eint_base, data->irq));
 	ctrl &= ~mask;
 	ctrl |= newvalue << shift;
-	__raw_writel(ctrl, EINT_CON(exynos_eint_base, data->irq));
+	writel_relaxed(ctrl, EINT_CON(exynos_eint_base, data->irq));
 	spin_unlock(&eint_lock);
 
 	if (soc_is_exynos5250())
@@ -827,8 +827,8 @@ static inline void exynos_irq_demux_eint(unsigned int start)
 {
 	unsigned int irq;
 
-	u32 status = __raw_readl(EINT_PEND(exynos_eint_base, start));
-	u32 mask = __raw_readl(EINT_MASK(exynos_eint_base, start));
+	u32 status = readl_relaxed(EINT_PEND(exynos_eint_base, start));
+	u32 mask = readl_relaxed(EINT_MASK(exynos_eint_base, start));
 
 	status &= ~mask;
 	status &= 0xff;
