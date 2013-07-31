@@ -2499,8 +2499,7 @@ static struct vendor_data vendor_st_pl023 = {
 	.loopback = false,
 };
 
-static int __init
-pl022_amba_probe(struct amba_device *adev, const struct amba_id *id)
+static int pl022_amba_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct pl022 *pl022 = NULL;
 	int ret;
