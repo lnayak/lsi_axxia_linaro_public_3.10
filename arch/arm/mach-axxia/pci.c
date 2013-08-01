@@ -61,8 +61,7 @@ static unsigned int axxia_pciex_port_count = 3;
 
 static void axxia_probe_pciex_bridge(struct device_node *np);
 
-static void __init
-fixup_axxia_pci_bridge(struct pci_dev *dev)
+static void fixup_axxia_pci_bridge(struct pci_dev *dev)
 {
 	/* if we aren't a PCIe don't bother */
 	if (!pci_find_capability(dev, PCI_CAP_ID_EXP))
