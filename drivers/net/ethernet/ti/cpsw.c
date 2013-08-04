@@ -490,7 +490,7 @@ void cpsw_rx_handler(void *token, int len, int status)
 		skb_put(skb, len);
 		cpts_rx_timestamp(priv->cpts, skb);
 		skb->protocol = eth_type_trans(skb, ndev);
-		netif_receive_skb(skb);
+		netif_rx(skb);
 		priv->stats.rx_bytes += len;
 		priv->stats.rx_packets++;
 	} else {
@@ -507,19 +507,24 @@ void cpsw_rx_handler(void *token, int len, int status)
 static irqreturn_t cpsw_interrupt(int irq, void *dev_id)
 {
 	struct cpsw_priv *priv = dev_id;
+	unsigned long flags;
 	u32 rx, tx, rx_thresh;
 
+	spin_lock_irqsave(&priv->lock, flags);
 	rx_thresh = __raw_readl(&priv->wr_regs->rx_thresh_stat);
 	rx = __raw_readl(&priv->wr_regs->rx_stat);
 	tx = __raw_readl(&priv->wr_regs->tx_stat);
-	if (!rx_thresh && !rx && !tx)
+	if (!rx_thresh && !rx && !tx) {
+		spin_unlock_irqrestore(&priv->lock, flags);
 		return IRQ_NONE;
+	}
 
 	cpsw_intr_disable(priv);
 	if (priv->irq_enabled == true) {
 		cpsw_disable_irq(priv);
 		priv->irq_enabled = false;
 	}
+	spin_unlock_irqrestore(&priv->lock, flags);
 
 	if (netif_running(priv->ndev)) {
 		napi_schedule(&priv->napi);
@@ -541,7 +546,9 @@ static int cpsw_poll(struct napi_struct *napi, int budget)
 {
 	struct cpsw_priv	*priv = napi_to_priv(napi);
 	int			num_tx, num_rx;
+	unsigned long		flags;
 
+	spin_lock_irqsave(&priv->lock, flags);
 	num_tx = cpdma_chan_process(priv->txch, 128);
 	if (num_tx)
 		cpdma_ctlr_eoi(priv->dma, CPDMA_EOI_TX);
@@ -817,7 +824,7 @@ static void cpsw_slave_open(struct cpsw_slave *slave, struct cpsw_priv *priv)
 				   1 << slave_port, 0, 0, ALE_MCAST_FWD_2);
 
 	slave->phy = phy_connect(priv->ndev, slave->data->phy_id,
-				 &cpsw_adjust_link, slave->data->phy_if);
+				 &cpsw_adjust_link, 0, slave->data->phy_if);
 	if (IS_ERR(slave->phy)) {
 		dev_err(priv->dev, "phy %s not found on slave %d\n",
 			slave->data->phy_id, slave->slave_num);
@@ -1286,7 +1293,7 @@ clean_vid:
 }
 
 static int cpsw_ndo_vlan_rx_add_vid(struct net_device *ndev,
-				    __be16 proto, u16 vid)
+		unsigned short vid)
 {
 	struct cpsw_priv *priv = netdev_priv(ndev);
 
@@ -1298,7 +1305,7 @@ static int cpsw_ndo_vlan_rx_add_vid(struct net_device *ndev,
 }
 
 static int cpsw_ndo_vlan_rx_kill_vid(struct net_device *ndev,
-				     __be16 proto, u16 vid)
+		unsigned short vid)
 {
 	struct cpsw_priv *priv = netdev_priv(ndev);
 	int ret;
@@ -1459,8 +1466,12 @@ static int cpsw_probe_dt(struct cpsw_platform_data *data,
 
 	if (of_property_read_u32(node, "active_slave", &prop)) {
 		pr_err("Missing active_slave property in the DT.\n");
-		ret = -EINVAL;
-		goto error_ret;
+		if (of_property_read_u32(node, "cpts_active_slave", &prop)) {
+			ret = -EINVAL;
+			goto error_ret;
+		} else {
+			pr_err("Using old cpts_active_slave as fallback.\n");
+		}
 	}
 	data->active_slave = prop;
 
@@ -1633,7 +1644,7 @@ static int cpsw_probe_dual_emac(struct platform_device *pdev,
 		priv_sl2->irqs_table[i] = priv->irqs_table[i];
 		priv_sl2->num_irqs = priv->num_irqs;
 	}
-	ndev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
+	ndev->features |= NETIF_F_HW_VLAN_FILTER;
 
 	ndev->netdev_ops = &cpsw_netdev_ops;
 	SET_ETHTOOL_OPS(ndev, &cpsw_ethtool_ops);
@@ -1872,7 +1883,7 @@ static int cpsw_probe(struct platform_device *pdev)
 		k++;
 	}
 
-	ndev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
+	ndev->features |= NETIF_F_HW_VLAN_FILTER;
 
 	ndev->netdev_ops = &cpsw_netdev_ops;
 	SET_ETHTOOL_OPS(ndev, &cpsw_ethtool_ops);
