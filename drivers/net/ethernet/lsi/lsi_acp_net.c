@@ -3350,8 +3350,8 @@ appnic_init(struct net_device *device)
 	write_mac_(0x1, APPNIC_RX_MODE);
 	write_mac_(0x0, APPNIC_TX_SOFT_RESET);
 	write_mac_(0x1, APPNIC_TX_MODE);
-	/*write_mac_(0x300a, APPNIC_TX_WATERMARK);*/
-	write_mac_(0x7f007f, APPNIC_TX_WATERMARK);
+	write_mac_(0x300a, APPNIC_TX_WATERMARK);
+	/*write_mac_(0x7f007f, APPNIC_TX_WATERMARK);*/
 	write_mac_(0x1, APPNIC_TX_HALF_DUPLEX_CONF);
 	write_mac_(0xffff, APPNIC_TX_TIME_VALUE_CONF);
 	write_mac_(0x1, APPNIC_TX_INTERRUPT_CONTROL);
