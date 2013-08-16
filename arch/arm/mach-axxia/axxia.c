@@ -221,7 +221,9 @@ void __init axxia_dt_init(void)
 	ssp_base = of_iomap(of_find_compatible_node(NULL, NULL, "arm,pl022"),
 			    0);
 
+#if 0
 	axxia_pcie_init();
+#endif
 
 #ifdef CONFIG_I2C
 	axxia_register_i2c_busses();
