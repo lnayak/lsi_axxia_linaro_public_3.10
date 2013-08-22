@@ -2617,11 +2617,13 @@ int appnic_open(struct net_device *device)
 #ifndef CONFIG_ACP
 	WARN_PRINT("PHY is in polling mode.\n");
 #endif
+#if 0
 	init_timer(&appnic_timer_);
 	appnic_timer_.expires = jiffies + (APPNIC_TIMER_PERIOD * HZ);
 	appnic_timer_.data = (unsigned long) device;
 	appnic_timer_.function = appnic_timer_handler_;
 	add_timer(&appnic_timer_);
+#endif
 	dev_->polling = 1;
 
 #endif /* PHYLESS */
