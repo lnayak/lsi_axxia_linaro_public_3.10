@@ -40,7 +40,6 @@
 #endif
 #include <asm/mach-types.h>
 #include <asm/sizes.h>
-#include <asm/pmu.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/mach/time.h>
@@ -110,10 +109,6 @@ void __init axxia_dt_timer_init(void)
 	sp804_clocksource_and_sched_clock_init(base, "axxia-timer0");
 }
 
-static struct sys_timer axxia_dt_timer = {
-	.init = axxia_dt_timer_init,
-};
-
 static struct mmci_platform_data mmc_plat_data = {
 	.ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34,
 	.status	  = NULL,
@@ -151,58 +146,6 @@ static struct of_dev_auxdata axxia_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("arm,primecell", 0x2010093000ULL,
 		       "gpio1", &gpio1_plat_data),
 	{}
-};
-
-static struct resource axxia_pmu_resources[] = {
-	[0] = {
-		.start  = IRQ_PMU,
-		.end    = IRQ_PMU,
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-/*
- * The PMU IRQ lines of two cores are wired together into a single interrupt.
- * Bounce the interrupt to other cores if it's not ours.
- */
-#define CORES_PER_CLUSTER  4
-static irqreturn_t axxia_pmu_handler(int irq, void *dev, irq_handler_t handler)
-{
-	irqreturn_t ret = handler(irq, dev);
-	int cpu = smp_processor_id();
-	int cluster = cpu / CORES_PER_CLUSTER;
-	int other;
-
-	if (ret == IRQ_NONE) {
-
-		/* Look until we find another cpu that's online. */
-		do {
-			other = (++cpu % CORES_PER_CLUSTER) +
-				(cluster * CORES_PER_CLUSTER);
-		} while (!cpu_online(other));
-
-		irq_set_affinity(irq, cpumask_of(other));
-	}
-
-	/*
-	 * We should be able to get away with the amount of IRQ_NONEs we give,
-	 * while still having the spurious IRQ detection code kick in if the
-	 * interrupt really starts hitting spuriously.
-	 */
-	return ret;
-}
-
-static struct arm_pmu_platdata axxia_pmu_platdata = {
-	.handle_irq		= axxia_pmu_handler,
-};
-
-
-static struct platform_device pmu_device = {
-	.name			= "arm-pmu",
-	.id			= ARM_PMU_DEVICE_CPU,
-	.num_resources		= ARRAY_SIZE(axxia_pmu_resources),
-	.resource		= axxia_pmu_resources,
-	.dev.platform_data	= &axxia_pmu_platdata,
 };
 
 static inline void
@@ -277,10 +220,6 @@ void __init axxia_dt_init(void)
 	 */
 	ssp_base = of_iomap(of_find_compatible_node(NULL, NULL, "arm,pl022"),
 			    0);
-	if (!WARN_ON(ssp_base == NULL)) {
-		/* Use legacy mode, bits 0..4 control nCS[0..4] pins */
-		writel(0x1F, ssp_base+0x30);
-	}
 
 #if 0
 	axxia_pcie_init();
@@ -289,8 +228,6 @@ void __init axxia_dt_init(void)
 #ifdef CONFIG_I2C
 	axxia_register_i2c_busses();
 #endif
-
-	platform_device_register(&pmu_device);
 }
 
 static void axxia_restart(char str, const char *cmd)
