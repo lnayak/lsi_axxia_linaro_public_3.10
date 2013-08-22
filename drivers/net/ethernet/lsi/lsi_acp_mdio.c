@@ -18,14 +18,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307	 USA
  */
 
+#if defined(CONFIG_ARCH_AXXIA) && defined(CONFIG_ARM)
+
 #include <linux/module.h>
 #include <linux/of.h>
 #include <asm/irq.h>
+#include <asm/lsi/acp_ncr.h>
 #include <linux/io.h>
 #include <linux/of_address.h>
 #include <linux/irqdomain.h>
-
-#include <linux/acp_ncr.h>
 
 /*
   ==============================================================================
@@ -170,26 +171,6 @@ acp_mdio_initialize(void)
 #endif /* ! CONFIG_ACPISS */
 
 /*
-  ==============================================================================
-  ==============================================================================
-  Interrupts
-  ==============================================================================
-  ==============================================================================
-*/
-
-/*
-  ------------------------------------------------------------------------------
-  acp_irq_create_mapping
-*/
-
-unsigned int
-acp_irq_create_mapping(struct irq_domain *host, irq_hw_number_t hwirq)
-{
-	return irq_create_mapping(host, hwirq);
-}
-EXPORT_SYMBOL(acp_irq_create_mapping);
-
-/*
   ------------------------------------------------------------------------------
   acp_wrappers_init
 */
@@ -222,8 +203,6 @@ acp_wrappers_init(void)
 	mdio_address = of_translate_address(np, field);
 	mdio_size = field[1];
 	mdio_base = (unsigned long)ioremap(mdio_address, mdio_size);
-	printk(KERN_INFO "%s:%d - mdio_address=0x%llx mdio_size=0x%x mdio_base=0x%lx\n",
-	       __FILE__, __LINE__, mdio_address, mdio_size, mdio_base);
 	rc = acp_mdio_initialize();
 #else
 	rc = 0;
@@ -233,8 +212,11 @@ error:
 
 	return rc;
 }
+
 module_init(acp_wrappers_init);
 
 MODULE_AUTHOR("LSI Corporation");
 MODULE_DESCRIPTION("Timing Test");
 MODULE_LICENSE("GPL");
+
+#endif
