@@ -163,7 +163,8 @@ config GENERIC_LOCKBREAK
 	depends on SMP
 
 config RWSEM_GENERIC_SPINLOCK
-	def_bool PREEMPT_RT_FULL
+	bool
+	default y
 
 config RWSEM_XCHGADD_ALGORITHM
 	def_bool !RWSEM_GENERIC_SPINLOCK && !PREEMPT_RT_FULL
