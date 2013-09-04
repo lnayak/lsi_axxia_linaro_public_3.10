@@ -276,11 +276,3 @@ struct smp_operations __initdata axxia_smp_ops = {
 	.smp_secondary_init	= axxia_secondary_init,
 	.smp_boot_secondary	= axxia_boot_secondary,
 };
-
-bool __init axxia_smp_init_ops(void)
-{
-	struct smp_operations *ops = &axxia_smp_ops;
-	smp_set_ops(ops);
-
-	return true;
-}

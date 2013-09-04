@@ -51,6 +51,10 @@
 #include "pci.h"
 #include "i2c.h"
 
+#ifdef CONFIG_SMP
+extern struct smp_operations axxia_smp_ops __initdata;
+#endif
+
 static const char *axxia_dt_match[] __initconst = {
 	"lsi,axm5516",		/* AXM5516 */
 	"lsi,axm5516-sim",	/* AXM5516 Simulation */
@@ -237,7 +241,7 @@ static void axxia_restart(char str, const char *cmd)
 
 DT_MACHINE_START(AXXIA_DT, "LSI Axxia")
 	.dt_compat	= axxia_dt_match,
-	.smp_init	= smp_init_ops(axxia_smp_init_ops),
+	.smp		= smp_ops(axxia_smp_ops),
 	.map_io		= axxia_dt_map_io,
 	.init_early	= axxia_dt_init_early,
 	.init_irq	= axxia_dt_init_irq,
