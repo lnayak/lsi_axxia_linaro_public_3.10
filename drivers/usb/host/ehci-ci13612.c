@@ -24,24 +24,36 @@
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 #include <linux/of_platform.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
+#include <linux/uaccess.h>
+#include <linux/io.h>
 #include "ehci-ci13612.h"
 
 
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
 static void ci13612_usb_setup(struct usb_hcd *hcd)
 {
 	int USB_TXFIFOTHRES, VUSB_HS_TX_BURST;
 	u32 deviceMode;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	u32 txfulltuning = 0;
 
-	/* Fix a HW erratum where the USB core may overrun its transmit FIFO. */
-	/* Fix a HW erratum where the USB core may incorrectly fill its
-	 * transmit FIFO.
+	/* Fix for HW errata 0002832: Settings of VUSB_HS_TX_BURST and
+	 * TXFILLTUNING.
+	 * TXFIFOTHRES should satisfy
+	 * TXFIFOTHRES * VUSB_HS_TX_BURST >= MAXIMUM PACKET SIZE of packet
+	 * relationship.
 	 */
 	VUSB_HS_TX_BURST = inl(USB_HWTXBUF) & 0x0f;
-	USB_TXFIFOTHRES = (inl(USB_TXFILLTUNING) & 0x3f0000) >> 16;
+	USB_TXFIFOTHRES = (32 << 16);
+	txfulltuning = (txfulltuning  & 0xffc0ffff) | USB_TXFIFOTHRES;
+	writel(txfulltuning, (void __iomem *)USB_TXFILLTUNING);
 
-	/* Fix related to an issue that we found with the burst size on
-	 * the AXI bus check if device or host mode
+	/* Fix for HW errata 9000556154: When operating in device mode Use
+	 * Unspecified Length Bursts by setting SBUSCFG to 0x0, or use stream
+	 * disable mode by setting USBMODE.SDIS to 0x1.
 	 */
 	deviceMode = ehci_readl(ehci, hcd->regs + 0x1A8);
 
@@ -54,21 +66,21 @@ static void ci13612_usb_setup(struct usb_hcd *hcd)
 	}
 
 	printk(KERN_INFO
-	       "ehci-ci13612 (ci13612_usb_setup): VUSB_HS_TX_BURST = 0x%x, USB_TXFIFOTHRES = 0x%x\n",
-		VUSB_HS_TX_BURST, USB_TXFIFOTHRES);
-
+	       "ehci-ci13612 (ci13612_usb_setup): VUSB_HS_TX_BURST = 0x%x,"
+		"USB_TXFIFOTHRES = 0x%x\n", VUSB_HS_TX_BURST, USB_TXFIFOTHRES);
 	return;
 }
+#endif
 
 /* called after powerup, by probe or system-pm "wakeup" */
 static int ehci_ci13612_reinit(struct ehci_hcd *ehci)
 {
+
 #ifdef CONFIG_LSI_USB_SW_WORKAROUND
 	/* S/W workarounds are not needed in AXM55xx */
 	ci13612_usb_setup(ehci_to_hcd(ehci));
-#endif
 	ehci_port_power(ehci, 0);
-
+#endif
 	return 0;
 }
 
@@ -78,7 +90,6 @@ static int ci13612_ehci_init(struct usb_hcd *hcd)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int retval = 0;
 	int len;
-
 
 	/* EHCI registers start at offset 0x100 */
 	ehci->caps = hcd->regs + 0x100;
@@ -109,17 +120,25 @@ static int ci13612_ehci_init(struct usb_hcd *hcd)
 static int ehci_run_fix(struct usb_hcd *hcd)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
 	u32 port_status;
+#endif
 	unsigned burst_size;
 	int retval;
-#ifdef CONFIG_LSI_USB_SW_WORKAROUND
 
-	/* Fix a HW erratum during the USB reset process. */
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
+	/* Fix HW errata 0003256: Do not enable USBCMD.RS for some time after
+	 * the USB reset has been completed (PORTSCx.PR=0). This ensures that
+	 * the host does not send the SOF until the ULPI post reset processing
+	 * has been completed. Note: This workaround reduces the likelihood of
+`	 * this problem occuring, but it may not entirely eliminate it.
+	 */
 	port_status = ehci_readl(ehci, &ehci->regs->port_status[0]);
 	printk(KERN_INFO "ehci_run: port_status = 0x%x\n", port_status);
 	if (port_status & 0x100) {
 		printk(KERN_ERR
-		       "USB port is in reset status, not able to change host controller status to run\n");
+		       "USB port is in reset status, not able to change"
+			"host controller status to run\n");
 		return -EFAULT;
 	}
 
@@ -127,10 +146,38 @@ static int ehci_run_fix(struct usb_hcd *hcd)
 	if (retval)
 		return retval;
 
+    /* Fix for HW errata 9000373951: You can adjust the burst size and fill the
+     * level to minimize under-run possibilities. In the failing case, the
+     * transfer size was 96 bytes, the burst size was 16, and the fill
+     * threshold level was set to 2. Because of this, the Host core issued
+     * the Out token when it requested the second burst of data. If the
+     * burst size had been changed to 8, and the fill level set to 3,
+     * then the core would have pre-fetched the 96 bytes before issuing
+     * the OUT token.
+     */
 	burst_size = ehci_readl(ehci, &ehci->regs->reserved[1]);
 	burst_size = (burst_size & 0xffff00ff) | 0x4000;	/* TXPBURST */
 	ehci_writel(ehci, burst_size, &ehci->regs->reserved[1]);
 
+#else
+#if 1
+    /* Fix for HW errata 9000373951: You can adjust the burst size and fill the
+     * level to minimize under-run possibilities. In the failing case, the
+     * transfer size was 96 bytes, the burst size was 16, and the fill
+     * threshold level was set to 2. Because of this, the Host core issued
+     * the Out token when it requested the second burst of data. If the
+     * burst size had been changed to 8, and the fill level set to 3,
+     * then the core would have pre-fetched the 96 bytes before issuing
+     * the OUT token.
+     */
+	burst_size = ehci_readl(ehci, &ehci->regs->reserved2[1]);
+	burst_size = (burst_size & 0xffff00ff) | 0x4000;	/* TXPBURST */
+	ehci_writel(ehci, burst_size, &ehci->regs->reserved2[1]);
+
+	retval = ehci_run(hcd);
+	if (retval)
+		return retval;
+#endif
 #endif
 
 	return 0;
@@ -170,8 +217,14 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct resource *res;
 
-	if (!of_device_is_available(np))
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
+
+      /* Check if device is enabled */
+	if (!of_device_is_available(np)) {
+		printk(KERN_INFO "%s: Port disabled via device-tree\n",
+			np->full_name);
 		return -ENODEV;
+	}
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -185,11 +238,28 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		goto fail_create_hcd;
 	}
 
+	if (0 != irq_set_irq_type(87, IRQ_TYPE_LEVEL_HIGH)) {
+		dev_dbg(&pdev->dev, "set_irq_type() failed\n");
+		retval = -EBUSY;
+		goto fail_create_hcd;
+	}
+#else
+
+        irq = irq_of_parse_and_map(np, 0);
+	if (NO_IRQ == irq) {
+		dev_dbg(&pdev->dev, "error getting irq number\n");
+		retval = -EBUSY;
+		goto fail_create_hcd;
+	}
+
 	if (0 != irq_set_irq_type(irq, IRQ_TYPE_LEVEL_HIGH)) {
 		dev_dbg(&pdev->dev, "set_irq_type() failed\n");
 		retval = -EBUSY;
 		goto fail_create_hcd;
 	}
+
+#endif
+
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -204,6 +274,7 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		goto fail_create_hcd;
 	}
 
+
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = resource_size(res);
 
@@ -214,17 +285,19 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		goto fail_put_hcd;
 	}
 
-	/* FIXME: This reported error since we don't have a second register
-	 * area defined in our dtb. Should we add it or stay backwards
-	 * compatible ?
-	 */
+
 	gpreg_base = of_iomap(np, 1);
 	if (!gpreg_base) {
 		dev_warn(&pdev->dev, "of_iomap error can't map region 1\n");
+		retval = -ENOMEM;
+		goto fail_put_hcd;
 	} else {
 		/* Setup GPREG for USB to enable the 6-bit address line */
 		writel(0x0, gpreg_base + 0x8);
-
+#ifndef CONFIG_LSI_USB_SW_WORKAROUND
+		/* setup hprot for uncached USB mode */
+		writel(0x0, gpreg_base + 0x74);
+#endif
 		iounmap(gpreg_base);
 	}
 
@@ -234,7 +307,6 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		return retval;
 	}
 
-	iounmap(hcd->regs);
 fail_put_hcd:
 	usb_put_hcd(hcd);
 fail_create_hcd:
