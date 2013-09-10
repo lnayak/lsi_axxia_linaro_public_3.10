@@ -80,6 +80,7 @@ struct mtc_regs {
 #define MTC_PRGMEM_SIZE 256   /* program memory size in words */
 #define MTC_TDOMEM_SIZE 256   /* tdo memory size in words */
 
+#define DEBUG
 
 #ifdef __MTC_SIMULATION
     struct mtc_regs  _mtc_regs;
@@ -3009,9 +3010,10 @@ static long _mtc_config(struct mtc_device *dev,
 	cfg0.start_stopn = 0;
 	dev->regs->config0 =  *((u32 *) &cfg0);
 
-	/* 2. reset testgen */
+	/* 2. reset testgen, and init mem */
 	exec1.sw_reset = 1;
 	dev->regs->execute = *((u32 *) &exec1);
+	dev->regs->mem_init = 0x202;
 
 	/* 3. config MTC */
 	cfg0 =
