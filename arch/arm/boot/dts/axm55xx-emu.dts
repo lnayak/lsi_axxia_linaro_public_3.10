@@ -20,6 +20,8 @@
 
 /dts-v1/;
 
+/memreserve/ 0x00000000 0x00400000;
+
 / {
 	model = "AXM5516";
 	compatible = "arm", "lsi,axm5516";
@@ -168,6 +170,23 @@
 		};
 	};
 
+	clocks {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu {
+                        frequency = <0>; /* Filled in by the boot loader. */
+		};
+
+		peripheral {
+			frequency = <0>; /* Filled in by the boot loader. */
+		};
+
+		emmc {
+                        frequency = <0>; /* Filled in by the boot loader. */
+		};
+	};
+
 	memory@00000000 {
 		device_type = "memory";
 		reg = <0 0x00000000 0 0x10000000>;
@@ -247,6 +266,15 @@
 		ad-value = <0x61>;
 		mac-address = [00 00 00 00 00 00];
 	};
+
+        USB0: usb@004a4000 {
+                device_type = "usb";
+                compatible = "acp-usb";
+                enabled = <0>;
+                reg = <0x20 0x10140000 0x0 0020000>,
+                      <0x20 0x10094000 0x0 0002000>;
+                interrupts = <0 55 4>;
+        };
 
 	amba {
 		compatible = "arm,amba-bus";
