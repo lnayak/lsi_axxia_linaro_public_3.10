@@ -1,6 +1,10 @@
 #ifdef CONFIG_ARM
 
 /*
+  ARM STARTS HERE
+*/
+
+/*
  * drivers/net/ethernet/lsi/lsi_acp_net.c
  *
  * Copyright (C) 2009 LSI
@@ -211,6 +215,7 @@ EXPORT_SYMBOL(lsinet_counts);
   NAPI Support (new and newer)...
   =============================================================================
 */
+
 #define LSINET_NAPI
 #define LSINET_NAPI_WEIGHT 64
 
@@ -422,6 +427,10 @@ typedef union {
 #define BC_PHY_ID_HIGH_ID			0x40
 #define BC_PHY_ID_LOW_ID			0x61E4
 #define BC_PHY_ID_LOW_MODEL			0x1e
+
+/* BCM5221 registers */
+#define PHY_BCM_TEST_REG 0x1f
+#define PHY_AUXILIARY_MODE3 0x1d
 
 typedef union {
 	unsigned short raw;
@@ -1322,7 +1331,7 @@ dump_registers(struct net_device *device)
 
 		value = readl(rx_registers[i]);
 		printk(KERN_ERR
-		       "0x%08lx: 0x%08lx\n", (unsigned long)rx_registers[i], value);
+		       "0x%08lx: 0x%08lx\n", rx_registers[i], value);
 	}
 
 	/*
@@ -1337,7 +1346,7 @@ dump_registers(struct net_device *device)
 
 		value = readl(tx_registers[i]);
 		printk(KERN_ERR
-		       "0x%08lx: 0x%08lx\n", (unsigned long)tx_registers[i], value);
+		       "0x%08x: 0x%08x\n", tx_registers[i], value);
 	}
 
 	/*
@@ -1519,6 +1528,7 @@ static void clear_statistics_(appnic_device_t *device)
 
 static void get_hw_statistics_(appnic_device_t *device)
 {
+#if 0
 	unsigned long flags_;
 
 	/* tx_packets */
@@ -1571,6 +1581,7 @@ static void get_hw_statistics_(appnic_device_t *device)
 	device->stats.tx_aborted_errors = 0;
 
 	spin_unlock_irqrestore(&device->lock, flags_);
+#endif
 
 	/*
 	 * That's all.
@@ -1719,9 +1730,14 @@ static int enable_(struct net_device *device)
 	appnic_device_t *apnd = netdev_priv(device);
 
 	rx_configuration_ =
+		APPNIC_RX_CONF_STRIPCRC;
+
+#if 0
+	rx_configuration_ =
 		(APPNIC_RX_CONF_STRIPCRC |
 		 APPNIC_RX_CONF_RXFCE |
 		 APPNIC_RX_CONF_TXFCE);
+#endif
 	tx_configuration_ =
 		(APPNIC_TX_CONF_ENABLE_SWAP_SA |
 		 APPNIC_TX_CONF_APP_CRC_ENABLE |
@@ -1858,7 +1874,15 @@ void disable_nic_(void)
 static int
 phy_read_(int phy, int reg, unsigned short *value)
 {
-	return acp_mdio_read(phy, reg, value);
+	int rc;
+
+	rc = acp_mdio_read(phy, reg, value);
+#if 0
+	printk("phy_read: read 0x%x from reg 0x%x (phy 0x%x, rc %d)\n",
+	       *value, reg, phy, rc);
+#endif
+
+	return rc;
 }
 
 /*
@@ -1869,7 +1893,15 @@ phy_read_(int phy, int reg, unsigned short *value)
 static int
 phy_write_(int phy, int reg, unsigned short value)
 {
-	return acp_mdio_write(phy, reg, value);
+	int rc;
+
+	rc = acp_mdio_write(phy, reg, value);
+#if 0
+	printk("phy_write: wrote 0x%x to reg 0x%x (phy 0x%x, rc %d)\n",
+	       value, reg, phy, rc);
+#endif
+
+	return rc;
 }
 
 /*
@@ -1904,6 +1936,7 @@ phy_speed_(int phy)
 		else
 			goto return_10;
 	} else {
+#if 0
 		rc = phy_read_(phy, BC_AUX_ERROR_AND_GEN_STATUS_REG, &aux);
 
 		if (rc)
@@ -1913,6 +1946,14 @@ phy_speed_(int phy)
 			goto return_100;
 		else
 			goto return_10;
+#else
+		rc = phy_read_(0x1e, 0x18, &aux);
+
+		if (0 != (aux & 0x2))
+		  goto return_100;
+		else
+		  goto return_10;
+#endif
 	}
 
 error:
@@ -1958,6 +1999,7 @@ phy_duplex_(int phy)
 		else
 			goto return_half;
 	} else {
+#if 0
 		rc = phy_read_(phy, BC_AUX_ERROR_AND_GEN_STATUS_REG, &aux);
 
 		if (rc)
@@ -1967,6 +2009,14 @@ phy_duplex_(int phy)
 			goto return_full;
 		else
 			goto return_half;
+#else
+		rc = phy_read_(0x1e, 0x18, &aux);
+
+		if (0 != (aux & 0x1))
+		  goto return_full;
+		else
+		  goto return_half;
+#endif
 	}
 
 error:
@@ -1993,7 +2043,7 @@ phy_renegotiate_(int phy)
 	int autoneg_retries = 4;
 	int autoneg_complete_retries = 20;
 
-	printk(KERN_INFO "Initiating Auto Negotiation");
+	printk(KERN_INFO "Initiating Auto Negotiation (phy 0x%x)", phy);
 	phy_write_(phy, PHY_AUTONEG_ADVERTISE, 0x61);
 #if defined(PHY_DEBUG)
 	/*Debug Code */
@@ -2053,6 +2103,8 @@ static int phy_enable_(struct net_device *device)
 	phy_id_low_t phy_id_low_;
 	unsigned char phyaddr_string_[40];
 
+	printk("%d - apnd->phy_address=0x%x\n", __LINE__, apnd->phy_address);
+
 	if (0 == phy_read_(apnd->phy_address, PHY_ID_HIGH, &phy_id_high_.raw)) {
 		PHY_DEBUG_PRINT("Read PHY_ID_HIGH as 0x%x on mdio addr 0x%x.\n",
 		phy_id_high_.raw, apnd->phy_address);
@@ -2063,7 +2115,37 @@ static int phy_enable_(struct net_device *device)
 		phy_id_low_.raw, apnd->phy_address);
 	}
 
-	phy_renegotiate_(apnd->phy_address);
+	/*phy_renegotiate_(apnd->phy_address);*/
+
+	{
+	  phy_control_t phy_control;
+	  int rc;
+	  unsigned short value;
+
+	  rc = phy_read_(0x1e, PHY_CONTROL, &phy_control.raw);
+	  phy_control.bits.full_duplex = 0x1;
+	  phy_control.bits.force100 = 0x1;
+	  rc |= phy_write_(0, PHY_CONTROL, phy_control.raw);
+
+	  rc |= phy_read_(0x1e, 0x18, &value);
+	  printk("%s:%d - rc=%d value=0x%x\n", __FILE__, __LINE__, rc, value);
+	}
+
+	{
+	  unsigned short value;
+	  int rc;
+
+	  rc = phy_read_(0x1e, PHY_BCM_TEST_REG, &value);
+        /* Access Shadow reg 0x1d */
+        value = value | 0x80;
+	  rc |= phy_write_(0x1e, PHY_BCM_TEST_REG, value);
+
+        /* Set RX FIFO size to 0x7 */
+	  rc |= phy_write_(0x1e, PHY_AUXILIARY_MODE3, 0x7);
+		if (rc != 0) {
+			return rc;
+		}
+	}
 
 	return 0;
 }
@@ -2154,10 +2236,12 @@ lsinet_rx_packet(struct net_device *device)
 	}
 
 	/*dump_registers(device);*/
+#if 0
 	ok_ = read_mac_(APPNIC_RX_STAT_PACKET_OK);
 	overflow_ = read_mac_(APPNIC_RX_STAT_OVERFLOW);
 	crc_ = read_mac_(APPNIC_RX_STAT_CRC_ERROR);
 	align_ = read_mac_(APPNIC_RX_STAT_ALIGN_ERROR);
+#endif
 
 	/*
 	 * Copy the received packet into the skb.
@@ -2452,6 +2536,8 @@ static irqreturn_t appnic_isr_(int irq, void *device_id)
 	TRACE_BEGINNING();
 	LSINET_COUNTS_INC(LSINET_COUNTS_ISR_START);
 
+	/*printk("%d - phy_address=0x%x\n", __LINE__, appnic_device->phy_address);*/
+
 	/* Acquire the lock */
 	spin_lock_irqsave(&dev_->lock, flags);
 
@@ -2617,13 +2703,11 @@ int appnic_open(struct net_device *device)
 #ifndef CONFIG_ACP
 	WARN_PRINT("PHY is in polling mode.\n");
 #endif
-#if 0
 	init_timer(&appnic_timer_);
 	appnic_timer_.expires = jiffies + (APPNIC_TIMER_PERIOD * HZ);
 	appnic_timer_.data = (unsigned long) device;
 	appnic_timer_.function = appnic_timer_handler_;
 	add_timer(&appnic_timer_);
-#endif
 	dev_->polling = 1;
 
 #endif /* PHYLESS */
@@ -2798,6 +2882,7 @@ appnic_hard_start_xmit(struct sk_buff *skb,
 			descriptor.start_of_packet = 0;
 		}
 
+		asm volatile ("mcr p15,0,%0,c7,c10,4" : : "r" (0));
 		write_mac_(adapter->tx_head.raw, APPNIC_DMA_TX_HEAD_POINTER);
 		device->trans_start = jiffies;
 		LSINET_COUNTS_INC(LSINET_COUNTS_HST_SNT);
@@ -3031,6 +3116,11 @@ appnic_init(struct net_device *device)
 
 	TRACE_BEGINNING();
 
+	/*adapter->phy_address = 0x1e;*/
+
+	/* Set the FEMAC to uncached. */
+	/*writel( 0, (GPREG + 0x78));*/
+
 	/*
 	 * Reset the MAC
 	 */
@@ -3184,8 +3274,8 @@ appnic_init(struct net_device *device)
 		adapter->rx_tail_dma = (int) adapter->rx_tail -
 			(int) adapter->dma_alloc_offset;
 		printk("%s:%d - rx_tail=0x%08x rx_tail_dma=0x%08x\n",
-			    __FILE__, __LINE__,
-			    adapter->rx_tail, adapter->rx_tail_dma); /* ZZZ */
+		       __FILE__, __LINE__,
+		       adapter->rx_tail, adapter->rx_tail_dma); /* ZZZ */
 		dma_offset_ += sizeof(appnic_queue_pointer_t);
 		memset((void *) adapter->rx_tail, 0,
 		       sizeof(appnic_queue_pointer_t));
@@ -3742,6 +3832,10 @@ module_exit(lsinet_exit);
 
 
 #else
+
+/*
+  PPC STARTS HERE
+*/
 
 /*
  * drivers/net/ethernet/lsi/lsi_acp_net.c
