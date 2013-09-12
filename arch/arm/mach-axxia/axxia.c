@@ -32,6 +32,7 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/init.h>
+#include <linux/delay.h>
 #include <linux/smsc911x.h>
 #include <linux/spi/spi.h>
 #include <linux/clkdev.h>
@@ -237,7 +238,14 @@ void __init axxia_dt_init(void)
 
 static void axxia_restart(char str, const char *cmd)
 {
-	/* TBD */
+	void __iomem *base;
+
+	base = ioremap(0x2010000000, 0x40000);
+
+	writel(0x000000ab, base + 0x31000); /* Access Key */
+	writel(0x00000040, base + 0x31004); /* Intrnl Boot, 0xffff0000 Target */
+	writel(0x80000000, base + 0x3180c); /* Set ResetReadDone */
+	writel(0x00080802, base + 0x31008); /* Chip Reset */
 }
 
 DT_MACHINE_START(AXXIA_DT, "LSI Axxia")
