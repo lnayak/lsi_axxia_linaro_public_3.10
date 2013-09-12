@@ -215,10 +215,6 @@ void __init axxia_dt_init(void)
 #if 0
 	axxia_pcie_init();
 #endif
-
-#ifdef CONFIG_I2C
-	axxia_register_i2c_busses();
-#endif
 }
 
 static void axxia_restart(char str, const char *cmd)
