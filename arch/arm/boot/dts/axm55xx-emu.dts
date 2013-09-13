@@ -259,8 +259,8 @@
 			  <0x20 0x10121000 0 0x1000>,
 			  <0x20 0x10122000 0 0x1000>;
 		interrupts = <0 2 4>,
-		             <0 3 4>,
-		             <0 4 4>;
+				     <0 3 4>,
+				     <0 4 4>;
 		mdio-reg = <0x20 0x10090000 0 0x1000>;
 		mdio-clock = <0>;
 		phy-address = <0x1e>;
@@ -320,6 +320,14 @@
 			compatible = "arm,pl061", "arm,primecell";
 			reg = <0x20 0x10093000 0x00 0x1000>;
 			interrupts = <0 18 4>;
+		};
+
+		ssp@2010088000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "arm,pl022", "arm,primecell";
+			reg = <0x20 0x10088000 0x00 0x1000>;
+			interrupts = <0 42 4>;
 		};
 	};
 
