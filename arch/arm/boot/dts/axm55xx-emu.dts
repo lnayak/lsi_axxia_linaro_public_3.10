@@ -333,7 +333,7 @@
 		interrupts = <0 70 4>;
 	};
 
-	USB0: usb@004a4000 {
+	usb0: usb@004a4000 {
 		device_type = "usb";
 		compatible = "acp-usb";
 		enabled = <0>;
@@ -395,22 +395,22 @@
 		};
 	};
 
-	I2C0: i2c@0x02010084000 {
+	i2c0: i2c@0x02010084000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "lsi,api2c";
 		device_type = "i2c";
-		port = <0>;
+		bus = <0>;
 		reg = <0x20 0x10084000 0x00 0x1000>;
 		interrupts = <0 19 4>;
 	};
 
-	I2C1: i2c@0x02010085000 {
+	i2c1: i2c@0x02010085000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "lsi,api2c";
 		device_type = "i2c";
-		port = <1>;
+		bus = <1>;
 		reg = <0x20 0x10085000 0x00 0x1000>;
 		interrupts = <0 20 4>;
 		eeprom@54 {
@@ -420,23 +420,22 @@
 		};
 	};
 
-	I2C2: i2c@0x02010086000 {
+	i2c2: i2c@0x02010086000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "lsi,api2c";
 		device_type = "i2c";
-		port = <2>;
+		bus = <2>;
 		reg = <0x20 0x10086000 0x00 0x1000>;
 		interrupts = <0 21 4>;
 	};
 
-	SMB: i2c@0x02010087000 {
+	smb: i2c@0x02010087000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "lsi,api2c";
 		device_type = "i2c";
-		port = <3>;
-		bus_name = "smb";
+		bus = <3>;
 		reg = <0x20 0x10087000 0x00 0x1000>;
 		interrupts = <0 22 4>;
 	};
