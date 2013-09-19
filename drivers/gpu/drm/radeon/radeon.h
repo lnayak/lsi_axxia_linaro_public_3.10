@@ -1146,7 +1146,6 @@ struct radeon_uvd {
 	void			*cpu_addr;
 	uint64_t		gpu_addr;
 	void			*saved_bo;
-	unsigned		fw_size;
 	atomic_t		handles[RADEON_MAX_UVD_HANDLES];
 	struct drm_file		*filp[RADEON_MAX_UVD_HANDLES];
 	struct delayed_work	idle_work;
@@ -1686,6 +1685,7 @@ struct radeon_device {
 	const struct firmware *rlc_fw;	/* r6/700 RLC firmware */
 	const struct firmware *mc_fw;	/* NI MC firmware */
 	const struct firmware *ce_fw;	/* SI CE firmware */
+	const struct firmware *uvd_fw;	/* UVD firmware */
 	struct r600_blit r600_blit;
 	struct r600_vram_scratch vram_scratch;
 	int msi_enabled; /* msi enabled */
@@ -1764,7 +1764,7 @@ void r100_io_wreg(struct radeon_device *rdev, u32 reg, u32 v);
 		WREG32(reg, tmp_);				\
 	} while (0)
 #define WREG32_AND(reg, and) WREG32_P(reg, 0, and)
-#define WREG32_OR(reg, or) WREG32_P(reg, or, ~or)
+#define WREG32_OR(reg, or) WREG32_P(reg, or, ~(or))
 #define WREG32_PLL_P(reg, val, mask)				\
 	do {							\
 		uint32_t tmp_ = RREG32_PLL(reg);		\
