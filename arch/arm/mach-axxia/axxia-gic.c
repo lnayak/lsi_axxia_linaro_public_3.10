@@ -1164,10 +1164,10 @@ int __init gic_of_init(struct device_node *node, struct device_node *parent)
 	cpu_base = of_iomap(node, 1);
 	WARN(!cpu_base, "unable to map gic cpu registers\n");
 
-	ipi_mask_reg_base = of_iomap(node, 2);
+	ipi_mask_reg_base = of_iomap(node, 4);
 	WARN(!ipi_mask_reg_base, "unable to map Axxia IPI mask registers\n");
 
-	ipi_send_reg_base = of_iomap(node, 3);
+	ipi_send_reg_base = of_iomap(node, 5);
 	WARN(!ipi_send_reg_base, "unable to map Axxia IPI send registers\n");
 
 	if (of_property_read_u32(node, "cpu-offset", &percpu_offset))
