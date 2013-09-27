@@ -56,6 +56,8 @@
 extern struct smp_operations axxia_smp_ops __initdata;
 #endif
 
+extern void axxia_ddr_retention_init(void);
+
 static const char *axxia_dt_match[] __initconst = {
 	"lsi,axm5516",		/* AXM5516 */
 	"lsi,axm5516-sim",	/* AXM5516 Simulation */
@@ -213,6 +215,8 @@ void __init axxia_dt_init(void)
 			    0);
 
 	axxia_pcie_init();
+
+    axxia_ddr_retention_init();
 }
 
 static void axxia_restart(char str, const char *cmd)
