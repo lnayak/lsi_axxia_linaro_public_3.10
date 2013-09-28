@@ -92,7 +92,7 @@ typedef union {
   ncr_register_read
 */
 
-static __inline__ unsigned long
+__inline__ unsigned long
 ncr_register_read(unsigned *address)
 {
 	unsigned long value;
@@ -108,7 +108,7 @@ ncr_register_read(unsigned *address)
   ncr_register_write
 */
 
-static __inline__ void
+__inline__ void
 ncr_register_write(const unsigned value, unsigned *address)
 {
 	printk("%s: value=0x%x address=0x%p\n", __FUNCTION__, value, address);

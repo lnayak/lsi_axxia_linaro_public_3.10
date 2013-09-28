@@ -37,4 +37,9 @@
 int ncr_read(unsigned long, unsigned long, int, void *);
 int ncr_write(unsigned long, unsigned long, int, void *);
 
+#ifdef CONFIG_ARM
+unsigned long ncr_register_read(unsigned *);
+void ncr_register_write(const unsigned , unsigned *);
+#endif
+
 #endif /*  __DRIVERS_LSI_ACP_NCR_H */
