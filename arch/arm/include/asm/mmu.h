@@ -11,6 +11,7 @@ typedef struct {
 #endif
 	unsigned int	vmalloc_seq;
 	unsigned long	sigpage;
+	atomic_t	gup_readers;
 } mm_context_t;
 
 #ifdef CONFIG_CPU_HAS_ASID
