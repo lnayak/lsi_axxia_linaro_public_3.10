@@ -286,7 +286,7 @@ again:
 	if (unlikely(PageTail(page))) {
 		put_page(page);
 		/* serialize against __split_huge_page_splitting() */
-		local_irq_disable();
+		arch_block_thp_split(mm);
 		if (likely(__get_user_pages_fast(address, 1, 1, &page) == 1)) {
 			page_head = compound_head(page);
 			/*
@@ -303,9 +303,9 @@ again:
 				get_page(page_head);
 				put_page(page);
 			}
-			local_irq_enable();
+			arch_unblock_thp_split(mm);
 		} else {
-			local_irq_enable();
+			arch_unblock_thp_split(mm);
 			goto again;
 		}
 	}
