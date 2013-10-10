@@ -1057,7 +1057,9 @@ rt_mutex_slowtrylock(struct rt_mutex *lock)
 {
 	int ret = 0;
 
-	raw_spin_lock(&lock->wait_lock);
+	if (!raw_spin_trylock(&lock->wait_lock)) {
+		return 0;
+	}
 	init_lists(lock);
 
 	if (likely(rt_mutex_owner(lock) != current)) {
