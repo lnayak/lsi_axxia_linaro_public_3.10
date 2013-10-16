@@ -88,10 +88,17 @@ static void *mmu_memory_cache_alloc(struct kvm_mmu_memory_cache *mc)
 	return p;
 }
 
+static bool page_empty(void *ptr)
+{
+	struct page *ptr_page = virt_to_page(ptr);
+	return page_count(ptr_page) == 1;
+}
+
 static void clear_pud_entry(struct kvm *kvm, pud_t *pud, phys_addr_t addr)
 {
 	if (pud_huge(*pud)) {
 		pud_clear(pud);
+		kvm_tlb_flush_vmid_ipa(kvm, addr);
 	} else {
 		pmd_t *pmd_table = pmd_offset(pud, 0);
 		pud_clear(pud);
@@ -105,6 +112,7 @@ static void clear_pmd_entry(struct kvm *kvm, pmd_t *pmd, phys_addr_t addr)
 {
 	if (pmd_huge(*pmd)) {
 		pmd_clear(pmd);
+		kvm_tlb_flush_vmid_ipa(kvm, addr);
 	} else {
 		pte_t *pte_table = pte_offset_kernel(pmd, 0);
 		pmd_clear(pmd);
@@ -143,13 +151,13 @@ static void unmap_range(struct kvm *kvm, pgd_t *pgdp,
 	pmd_t *pmd;
 	pte_t *pte;
 	unsigned long long addr = start, end = start + size;
-	u64 range;
+	u64 next;
 
 	while (addr < end) {
 		pgd = pgdp + pgd_index(addr);
 		pud = pud_offset(pgd, addr);
 		if (pud_none(*pud)) {
-			addr += PUD_SIZE;
+			addr = pud_addr_end(addr, end);
 			continue;
 		}
 
@@ -159,43 +167,35 @@ static void unmap_range(struct kvm *kvm, pgd_t *pgdp,
 			 * move on.
 			 */
 			clear_pud_entry(kvm, pud, addr);
-			addr += PUD_SIZE;
+			addr = pud_addr_end(addr, end);
 			continue;
 		}
 
 		pmd = pmd_offset(pud, addr);
 		if (pmd_none(*pmd)) {
-			addr += PMD_SIZE;
+			addr = pmd_addr_end(addr, end);
 			continue;
 		}
 
-		if (kvm_pmd_huge(*pmd)) {
-			/*
-			 * If we are dealing with a huge pmd, just clear it and
-			 * walk back up the ladder.
-			 */
-			clear_pmd_entry(kvm, pmd, addr);
-			if (pmd_empty(pmd))
-				clear_pud_entry(kvm, pud, addr);
-			addr += PMD_SIZE;
-			continue;
+		if (!kvm_pmd_huge(*pmd)) {
+			pte = pte_offset_kernel(pmd, addr);
+			clear_pte_entry(kvm, pte, addr);
+			next = addr + PAGE_SIZE;
 		}
 
-		pte = pte_offset_kernel(pmd, addr);
-		clear_pte_entry(kvm, pte, addr);
-		range = PAGE_SIZE;
-
-		/* If we emptied the pte, walk back up the ladder */
-		if (pte_empty(pte)) {
+		/*
+		 * If the pmd entry is to be cleared, walk back up the ladder
+		 */
+		if (kvm_pmd_huge(*pmd) || page_empty(pte)) {
 			clear_pmd_entry(kvm, pmd, addr);
-			range = PMD_SIZE;
-			if (pmd_empty(pmd)) {
+			next = pmd_addr_end(addr, end);
+			if (page_empty(pmd) && !page_empty(pud)) {
 				clear_pud_entry(kvm, pud, addr);
-				range = PUD_SIZE;
+				next = pud_addr_end(addr, end);
 			}
 		}
 
-		addr += range;
+		addr = next;
 	}
 }
 
@@ -462,65 +462,71 @@ void kvm_free_stage2_pgd(struct kvm *kvm)
 	kvm->arch.pgd = NULL;
 }
 
-/* Set a huge page pmd entry */
-static int stage2_set_pmd(struct kvm *kvm, struct kvm_mmu_memory_cache *cache,
-			  phys_addr_t addr, const pmd_t *new_pmd)
+static pmd_t *stage2_get_pmd(struct kvm *kvm, struct kvm_mmu_memory_cache *cache,
+			     phys_addr_t addr)
 {
 	pgd_t *pgd;
 	pud_t *pud;
 	pmd_t *pmd;
 
-	/* Create 2nd stage page table mapping - Level 1 */
 	pgd = kvm->arch.pgd + pgd_index(addr);
 	pud = pud_offset(pgd, addr);
 	if (pud_none(*pud)) {
 		if (!cache)
-			return 0; /* ignore calls from kvm_set_spte_hva */
+			return NULL;
 		pmd = mmu_memory_cache_alloc(cache);
 		pud_populate(NULL, pud, pmd);
 		get_page(virt_to_page(pud));
 	}
 
-	pmd = pmd_offset(pud, addr);
+	return pmd_offset(pud, addr);
+}
+
+static int stage2_set_pmd_huge(struct kvm *kvm, struct kvm_mmu_memory_cache
+			       *cache, phys_addr_t addr, const pmd_t *new_pmd)
+{
+	pmd_t *pmd, old_pmd;
+
+	pmd = stage2_get_pmd(kvm, cache, addr);
+	VM_BUG_ON(!pmd);
 
 	/*
 	 * Mapping in huge pages should only happen through a fault.  If a
 	 * page is merged into a transparent huge page, the individual
-	 * subpages of that huge page should me unmapped through MMU
+	 * subpages of that huge page should be unmapped through MMU
 	 * notifiers before we get here.
 	 *
 	 * Merging of CompoundPages is not supported; they should become
 	 * splitting first, unmapped, merged, and mapped back in on-demand.
 	 */
-	VM_BUG_ON(pmd_present(*pmd));
+	VM_BUG_ON(pmd_present(*pmd) && pmd_pfn(*pmd) != pmd_pfn(*new_pmd));
 
+	old_pmd = *pmd;
 	kvm_set_pmd(pmd, *new_pmd);
-	get_page(virt_to_page(pmd));
+	if (pmd_present(old_pmd))
+		kvm_tlb_flush_vmid_ipa(kvm, addr);
+	else
+		get_page(virt_to_page(pmd));
 	return 0;
 }
 
 static int stage2_set_pte(struct kvm *kvm, struct kvm_mmu_memory_cache *cache,
 			  phys_addr_t addr, const pte_t *new_pte, bool iomap)
 {
-	pgd_t *pgd;
-	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte, old_pte;
 
-	/* Create 2nd stage page table mapping - Level 1 */
-	pgd = kvm->arch.pgd + pgd_index(addr);
-	pud = pud_offset(pgd, addr);
-	if (pud_none(*pud)) {
-		if (!cache)
-			return 0; /* ignore calls from kvm_set_spte_hva */
-		pmd = mmu_memory_cache_alloc(cache);
-		pud_populate(NULL, pud, pmd);
-		get_page(virt_to_page(pud));
+	/* Create stage-2 page table mapping - Level 1 */
+	pmd = stage2_get_pmd(kvm, cache, addr);
+	if (!pmd) {
+		/*
+		 * Ignore calls from kvm_set_spte_hva for unallocated
+		 * address ranges.
+		 */
+		return 0;
 	}
 
-	pmd = pmd_offset(pud, addr);
-
-	/* Create 2nd stage page mappings - Level 2 */
+	/* Create stage-2 page mappings - Level 2 */
 	if (pmd_none(*pmd)) {
 		if (!cache)
 			return 0; /* ignore calls from kvm_set_spte_hva */
@@ -602,11 +608,11 @@ static bool transparent_hugepage_adjust(pfn_t *pfnp, phys_addr_t *ipap)
 		 * PG_tail to PG_head as we switch the pfn from tail to
 		 * head.
 		 */
-		mask = (PMD_SIZE / PAGE_SIZE) - 1;
+		mask = (PTRS_PER_PMD) - 1;
 		VM_BUG_ON((gfn & mask) != (pfn & mask));
 		if (pfn & mask) {
 			gfn &= ~mask;
-			*ipap &= ~(PMD_SIZE - 1);
+			*ipap &= ~PMD_MASK;
 			kvm_release_pfn_clean(pfn);
 			pfn &= ~mask;
 			kvm_get_pfn(pfn);
@@ -632,7 +638,6 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	struct kvm_mmu_memory_cache *memcache = &vcpu->arch.mmu_page_cache;
 	struct vm_area_struct *vma;
 	pfn_t pfn;
-	unsigned long psize;
 
 	write_fault = kvm_is_write_fault(kvm_vcpu_get_hsr(vcpu));
 	if (fault_status == FSC_PERM && !write_fault) {
@@ -640,26 +645,17 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		return -EFAULT;
 	}
 
-	/* Let's check if we will get back a huge page */
+	/* Let's check if we will get back a huge page backed by hugetlbfs */
 	down_read(&current->mm->mmap_sem);
 	vma = find_vma_intersection(current->mm, hva, hva + 1);
 	if (is_vm_hugetlb_page(vma)) {
 		hugetlb = true;
-		hva &= PMD_MASK;
 		gfn = (fault_ipa & PMD_MASK) >> PAGE_SHIFT;
-		psize = PMD_SIZE;
 	} else {
-		psize = PAGE_SIZE;
 		if (vma->vm_start & ~PMD_MASK)
 			force_pte = true;
 	}
 	up_read(&current->mm->mmap_sem);
-
-	pfn = gfn_to_pfn_prot(kvm, gfn, write_fault, &writable);
-	if (is_error_pfn(pfn))
-		return -EFAULT;
-
-	coherent_icache_guest_page(kvm, hva, psize);
 
 	/* We need minimum second+third level pages */
 	ret = mmu_topup_memory_cache(memcache, 2, KVM_NR_MEM_OBJS);
@@ -678,6 +674,10 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	 */
 	smp_rmb();
 
+	pfn = gfn_to_pfn_prot(kvm, gfn, write_fault, &writable);
+	if (is_error_pfn(pfn))
+		return -EFAULT;
+
 	spin_lock(&kvm->mmu_lock);
 	if (mmu_notifier_retry(kvm, mmu_seq))
 		goto out_unlock;
@@ -691,13 +691,15 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			kvm_set_s2pmd_writable(&new_pmd);
 			kvm_set_pfn_dirty(pfn);
 		}
-		ret = stage2_set_pmd(kvm, memcache, fault_ipa, &new_pmd);
+		coherent_icache_guest_page(kvm, hva & PMD_MASK, PMD_SIZE);
+		ret = stage2_set_pmd_huge(kvm, memcache, fault_ipa, &new_pmd);
 	} else {
 		pte_t new_pte = pfn_pte(pfn, PAGE_S2);
 		if (writable) {
 			kvm_set_s2pte_writable(&new_pte);
 			kvm_set_pfn_dirty(pfn);
 		}
+		coherent_icache_guest_page(kvm, hva, PAGE_SIZE);
 		ret = stage2_set_pte(kvm, memcache, fault_ipa, &new_pte, false);
 	}
 

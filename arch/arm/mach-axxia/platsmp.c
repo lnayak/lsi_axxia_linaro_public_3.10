@@ -20,6 +20,7 @@
 #include <asm/cacheflush.h>
 #include <linux/irqchip/arm-gic.h>
 #include <asm/mach/map.h>
+#include <asm/virt.h>
 
 #include <mach/axxia-gic.h>
 
@@ -91,8 +92,6 @@ static void flush_l3(void)
 #endif
 	return;
 }
-
-/*
 
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
@@ -292,19 +291,22 @@ static void __init axxia_smp_prepare_cpus(unsigned int max_cpus)
 				cpu_count++;
 			}
 
-			/* Release all physical cpu:s since we might want to
-			 * bring them online later. Also we need to get the
-			 * execution into kernel code (it's currently executing
-			 * in u-boot).
-			 */
-			phys_cpu = cpu_logical_map(i);
+			if (!is_hyp_mode_available()) {
+				/* Release all physical cpu:s when not in hyp mode
+				 * since we might want to bring them online later.
+				 * Also we need to get the execution into kernel
+				 * code (it's currently executing in u-boot).
+				 * u-boot releases the cores from reset in hyp mode.
+				 */
+				phys_cpu = cpu_logical_map(i);
 
-			if (phys_cpu != 0) {
-				resetVal = readl(apb2_ser3_base + 0x1010);
-				writel(0xab, apb2_ser3_base+0x1000);
-				resetVal &= ~(1 << phys_cpu);
-				writel(resetVal, apb2_ser3_base+0x1010);
-				udelay(1000);
+				if (phys_cpu != 0) {
+					resetVal = readl(apb2_ser3_base + 0x1010);
+					writel(0xab, apb2_ser3_base+0x1000);
+					resetVal &= ~(1 << phys_cpu);
+					writel(resetVal, apb2_ser3_base+0x1010);
+					udelay(1000);
+				}
 			}
 		}
 
