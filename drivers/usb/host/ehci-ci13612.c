@@ -103,7 +103,10 @@ static int ci13612_ehci_init(struct usb_hcd *hcd)
 
 	ehci->sbrn = 0x20;
 
-	/* reset and halt controller */
+	/* Reset is only allowed on a stopped controller */
+	ehci_halt(ehci);
+
+	/* Reset controller */
 	ehci_reset(ehci);
 
 	/* data structure init */

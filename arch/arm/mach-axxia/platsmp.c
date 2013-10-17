@@ -41,17 +41,16 @@ extern void axxia_secondary_startup(void);
 */
 static void flush_l3(void)
 {
-#if 0
 	unsigned long hnf_offsets[] = {
 		 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27
 	};
 	int i;
-        unsigned long status;
+	unsigned long status;
 	int retries;
 	void __iomem *dickens;
 
 	dickens = ioremap(0x2000000000, 0x1000000);
-
+#if 0
 	for (i = 0; i < (sizeof(hnf_offsets) / sizeof(unsigned long)); ++i) {
 		/* set state NOL3 */
 		writel(0x0, dickens + (0x10000 * hnf_offsets[i]) + 0x10);
@@ -69,27 +68,43 @@ static void flush_l3(void)
 		if (0 == retries)
 			BUG();
 	}
+#endif
 
-	for (i = 0; i < (sizeof(hnf_offsets) / sizeof(unsigned long)); ++i) {
-		/* set state FAM */
-		writel(0x3, dickens + (0x10000 * hnf_offsets[i]) + 0x10);
-	}
+	for (i=0;i < (sizeof(hnf_offsets) / sizeof(unsigned long)); ++i) {
+		status = readl(dickens + (0x10000 * hnf_offsets[i]) + 0x18);
 
-	for (i = 0; i < (sizeof(hnf_offsets) / sizeof(unsigned long)); ++i) {
-		retries = 10000;
+		/* If L3 not already set to FAM, set it to FAM*/
+		if ((status & 0xf) != 0xc) {
+			printk("JL: Switching L3s to FAM \n\r");
 
-		do {
-			status = readl(dickens +
-				       (0x10000 * hnf_offsets[i]) + 0x18);
-			udelay(1);
-		} while ((0 < --retries) && (0xc != (status & 0xf)));
+			for (i = 0; i < (sizeof(hnf_offsets) /
+					 sizeof(unsigned long)); ++i) {
+				/* set state FAM */
+				writel(0x3,
+				       (dickens +
+					(0x10000 * hnf_offsets[i]) + 0x10));
+			}
 
-		if (0 == retries)
-			BUG();
+			for (i = 0; i < (sizeof(hnf_offsets) /
+					 sizeof(unsigned long)); ++i) {
+				retries = 10000;
+
+				do {
+					status = readl(dickens +
+						       (0x10000 *
+							hnf_offsets[i]) + 0x18);
+					udelay(1);
+				} while ((0 < --retries) &&
+					 (0xc != (status & 0xf)));
+
+				if (0 == retries)
+					BUG();
+			}
+		}
 	}
 
 	iounmap(dickens);
-#endif
+
 	return;
 }
 
