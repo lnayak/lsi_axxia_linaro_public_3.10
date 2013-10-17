@@ -53,6 +53,14 @@
  */
 struct secondary_data secondary_data;
 
+#ifndef CONFIG_ARCH_AXXIA
+/*
+ *  * control for which core is the next to come out of the secondary
+ *   * boot "holding pen"
+ *    */
+volatile int __cpuinitdata pen_release = -1;
+#endif
+
 /*
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
