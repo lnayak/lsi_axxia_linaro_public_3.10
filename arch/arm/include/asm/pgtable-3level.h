@@ -227,6 +227,7 @@ PMD_BIT_FUNC(mkyoung,   |= PMD_SECT_AF);
 #define pfn_pmd(pfn,prot)	(__pmd(((phys_addr_t)(pfn) << PAGE_SHIFT) | pgprot_val(prot)))
 #define mk_pmd(page,prot)	pfn_pmd(page_to_pfn(page),prot)
 
+#define pmd_protnone(pmd)	(pmd_val(pmd) & PMD_SECT_NONE)
 /* represent a notpresent pmd by zero, this is used by pmdp_invalidate */
 #define pmd_mknotpresent(pmd)	(__pmd(0))
 
@@ -254,6 +255,26 @@ static inline void set_pmd_at(struct mm_struct *mm, unsigned long addr,
 static inline int has_transparent_hugepage(void)
 {
 	return 1;
+}
+
+#define __HAVE_ARCH_PMDP_SPLITTING_FLUSH
+static inline void pmdp_splitting_flush(struct vm_area_struct *vma, unsigned long address,
+			  pmd_t *pmdp)
+{
+	pmd_t pmd = pmd_mksplitting(*pmdp);
+	VM_BUG_ON(address & ~PMD_MASK);
+	set_pmd_at(vma->vm_mm, address, pmdp, pmd);
+
+	/*
+	 * Hold off until __get_user_pages_fast or arch_block_thp_splitting
+	 * have finished.
+	 *
+	 * The set_pmd_at above finishes with a dsb. This ensures that the
+	 * software splitting bit is observed by the critical section in
+	 * __get_user_pages_fast before we potentially start spinning below.
+	 */
+	while (atomic_read(&vma->vm_mm->context.gup_readers) != 0)
+		cpu_relax();
 }
 
 #endif /* __ASSEMBLY__ */
