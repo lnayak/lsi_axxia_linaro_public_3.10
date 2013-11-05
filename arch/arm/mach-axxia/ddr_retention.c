@@ -21,6 +21,9 @@
  */
 
 #include <linux/module.h>
+
+#ifndef CONFIG_ARCH_AXXIA_SIM
+
 #include <linux/cpu.h>
 #include <linux/reboot.h>
 #include <linux/syscore_ops.h>
@@ -271,6 +274,14 @@ void axxia_ddr_retention_init(void)
         printk("Failed to register DDR retention proc interface\n");
 }
 
-
-
 EXPORT_SYMBOL(initiate_retention_reset);
+
+#else
+
+void axxia_ddr_retention_init(void)
+{
+	return;
+}
+
+#endif
+
