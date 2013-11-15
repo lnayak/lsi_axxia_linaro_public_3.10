@@ -12,7 +12,6 @@ clean-files := fmboot.o zImage.fm axm55xx-sim.dtb
 arch/arm/boot/linux.img: $(obj)/fmboot.o $(srctree)/$(obj)/fmboot.lds $(obj)/zImage.fm
 	cd $(obj) && $(LD) -o ../linux.img --script=$(srctree)/$(obj)/fmboot.lds
 	tar jcf $(obj)/../linux.img.tar.bz2 $(obj)/../linux.img
-	rm -rf $(obj)/../linux.img
 
 $(obj)/zImage.fm: $(ZIMAGE) $(obj)/axm55xx-sim.dtb
 	python $(srctree)/$(obj)/pack.py $(ZIMAGE) $(obj)/axm55xx-sim.dtb > $@
