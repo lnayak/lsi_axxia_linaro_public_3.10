@@ -575,9 +575,15 @@ config LSI_MTC
 
 config LSI_NCR
 	tristate "LSI NCR Access"
-	depends on ARCH_AXXIA || ACP
+	depends on ACP
 	help
 	  Provides access to the LSI Axxia NCR bus.
+
+config LSI_SMMON
+	tristate "LSI System Memory Monitor"
+	depends on ARCH_AXXIA || ACP
+	help
+	  Monitor the system memory controllers for errors.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

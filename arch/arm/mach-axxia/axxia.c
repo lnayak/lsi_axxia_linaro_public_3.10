@@ -49,6 +49,7 @@
 #include <mach/timers.h>
 #include <mach/axxia-gic.h>
 #include <linux/irqchip/arm-gic.h>
+#include <mach/ncr.h>
 #include "axxia.h"
 #include "pci.h"
 #include "i2c.h"
@@ -300,6 +301,8 @@ void __init axxia_dt_init(void)
 			     axxia_auxdata_lookup, NULL);
 	pm_power_off = NULL; /* TBD */
 
+	ncr_init();
+
 	spi_register_board_info(spi_devs, ARRAY_SIZE(spi_devs));
 
 	/*
@@ -307,6 +310,10 @@ void __init axxia_dt_init(void)
 	 */
 	ssp_base = of_iomap(of_find_compatible_node(NULL, NULL, "arm,pl022"),
 			    0);
+	if (!WARN_ON(ssp_base == NULL)) {
+		/* Use legacy mode, bits 0..4 control nCS[0..4] pins */
+		writel(0x1F, ssp_base+0x30);
+	}
 
 	axxia_pcie_init();
 
