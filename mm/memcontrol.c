@@ -2436,7 +2436,7 @@ static void refill_stock(struct mem_cgroup *memcg, unsigned int nr_pages)
  */
 static void drain_all_stock(struct mem_cgroup *root_memcg, bool sync)
 {
-	int cpu;
+	int cpu,curcpu;
 
 	/* Notify other cpus that system-wide "drain" is running */
 	get_online_cpus();
