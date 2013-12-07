@@ -41,7 +41,6 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/ring_buffer.h>
-#include <linux/stop_machine.h>
 #include <linux/time.h>
 #include <linux/hrtimer.h>
 #include <linux/kthread.h>
