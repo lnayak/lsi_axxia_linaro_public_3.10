@@ -220,13 +220,13 @@ ncr_read(unsigned long region, unsigned long address, int number,
 	if (NULL == apb2ser0_address)
 		return -1;
 #endif /* APB2SER_PHY_PHYS_ADDRESS */
-	
+
 	if (0 != ncr_lock(LOCK_DOMAIN))
 		return -1;
 
 	if (NCP_NODE_ID(region) != 0x0153) {
 		/*
-	  	  Set up the read command.
+		  Set up the read command.
 		*/
 
 		cdr2.raw = 0;
@@ -251,14 +251,14 @@ ncr_read(unsigned long region, unsigned long address, int number,
 		mb();
 
 		/*
-	  	  Wait for completion.
+		  Wait for completion.
 		*/
 
 		do {
 			--wfc_timeout;
 		} while ((0x80000000UL ==
-		  	ncr_register_read((unsigned *)(nca_address + 0xf0))) &&
-		 	0 < wfc_timeout);
+			ncr_register_read((unsigned *)(nca_address + 0xf0))) &&
+			0 < wfc_timeout);
 
 		if (0 == wfc_timeout) {
 			ncr_unlock(LOCK_DOMAIN);
@@ -266,7 +266,7 @@ ncr_read(unsigned long region, unsigned long address, int number,
 		}
 
 		/*
-	  	  Copy data words to the buffer.
+		  Copy data words to the buffer.
 		*/
 
 		address = (unsigned long)(nca_address + 0x1000);
@@ -287,7 +287,7 @@ ncr_read(unsigned long region, unsigned long address, int number,
 		void __iomem *targ_address = apb2ser0_address +
 					     (address & (~0x3));
 		/*
-	  	  Copy data words to the buffer.
+		  Copy data words to the buffer.
 		*/
 
 		while (4 <= number) {
@@ -356,7 +356,7 @@ ncr_write(unsigned long region, unsigned long address, int number,
 
 		while (4 <= number) {
 			ncr_register_write(*((unsigned long *) buffer),
-				   	(unsigned *) data_word_base);
+					(unsigned *) data_word_base);
 			data_word_base += 4;
 			buffer += 4;
 			number -= 4;
@@ -386,14 +386,14 @@ ncr_write(unsigned long region, unsigned long address, int number,
 		mb();
 
 		/*
-	  	  Wait for completion.
+		  Wait for completion.
 		*/
 
 		do {
 			--wfc_timeout;
 		} while ((0x80000000UL ==
-		  	ncr_register_read((unsigned *)(nca_address + 0xf0))) &&
-		 	0 < wfc_timeout);
+			ncr_register_read((unsigned *)(nca_address + 0xf0))) &&
+			0 < wfc_timeout);
 
 		if (0 == wfc_timeout) {
 			ncr_unlock(LOCK_DOMAIN);
@@ -401,11 +401,11 @@ ncr_write(unsigned long region, unsigned long address, int number,
 		}
 
 		/*
-	  	  Check status.
+		  Check status.
 		*/
 
 		if(0x3 !=
-	    		((ncr_register_read((unsigned *) (nca_address + 0xf0)) &
+			((ncr_register_read((unsigned *) (nca_address + 0xf0)) &
 						0x00c00000) >> 22)) {
 			unsigned long status;
 
