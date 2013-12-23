@@ -32,6 +32,8 @@
 #include "ehci-ci13612.h"
 
 
+static int ci13612_ehci_halt (struct ehci_hcd *ehci);
+
 #ifdef CONFIG_LSI_USB_SW_WORKAROUND
 static void ci13612_usb_setup(struct usb_hcd *hcd)
 {
@@ -46,7 +48,7 @@ static void ci13612_usb_setup(struct usb_hcd *hcd)
 	 * TXFIFOTHRES * VUSB_HS_TX_BURST >= MAXIMUM PACKET SIZE of packet
 	 * relationship.
 	 */
-	VUSB_HS_TX_BURST = inl(USB_HWTXBUF) & 0x0f;
+	VUSB_HS_TX_BURST = readl(USB_HWTXBUF) & 0x0f;
 	USB_TXFIFOTHRES = (32 << 16);
 	txfulltuning = (txfulltuning  & 0xffc0ffff) | USB_TXFIFOTHRES;
 	writel(txfulltuning, (void __iomem *)USB_TXFILLTUNING);
@@ -79,7 +81,6 @@ static int ehci_ci13612_reinit(struct ehci_hcd *ehci)
 #ifdef CONFIG_LSI_USB_SW_WORKAROUND
 	/* S/W workarounds are not needed in AXM55xx */
 	ci13612_usb_setup(ehci_to_hcd(ehci));
-	ehci_port_power(ehci, 0);
 #endif
 	return 0;
 }
@@ -104,9 +105,9 @@ static int ci13612_ehci_init(struct usb_hcd *hcd)
 	ehci->sbrn = 0x20;
 
 	/* Reset is only allowed on a stopped controller */
-	ehci_halt(ehci);
+	ci13612_ehci_halt(ehci);
 
-	/* Reset controller */
+	/* reset controller */
 	ehci_reset(ehci);
 
 	/* data structure init */
@@ -120,70 +121,90 @@ static int ci13612_ehci_init(struct usb_hcd *hcd)
 	return retval;
 }
 
-static int ehci_run_fix(struct usb_hcd *hcd)
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
+/*
+ * ci13612_fixup_usbcmd_rs
+ *
+ * Fix HW errata 0003256: Do not enable USBCMD.RS for some time after the USB
+ * reset has been completed (PORTSCx.PR=0). This ensures that the host does not
+ * send the SOF until the ULPI post reset processing has been completed. Note:
+ * This workaround reduces the likelihood of this problem occuring, but it may
+ * not entirely eliminate it.
+ */
+static int
+ci13612_fixup_usbcmd_rs(struct ehci_hcd *ehci)
 {
-	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-#ifdef CONFIG_LSI_USB_SW_WORKAROUND
 	u32 port_status;
-#endif
-	unsigned burst_size;
-	int retval;
 
-#ifdef CONFIG_LSI_USB_SW_WORKAROUND
-	/* Fix HW errata 0003256: Do not enable USBCMD.RS for some time after
-	 * the USB reset has been completed (PORTSCx.PR=0). This ensures that
-	 * the host does not send the SOF until the ULPI post reset processing
-	 * has been completed. Note: This workaround reduces the likelihood of
-`	 * this problem occuring, but it may not entirely eliminate it.
-	 */
 	port_status = ehci_readl(ehci, &ehci->regs->port_status[0]);
-	printk(KERN_INFO "ehci_run: port_status = 0x%x\n", port_status);
+	pr_info("ehci-ci13612: port_status = 0x%x\n", port_status);
 	if (port_status & 0x100) {
-		printk(KERN_ERR
-		       "USB port is in reset status, not able to change"
-			"host controller status to run\n");
+		pr_err("ehci-ci13612: USB port is in reset status, "
+		       "not able to change HC status to run\n");
 		return -EFAULT;
 	}
-
-	retval = ehci_run(hcd);
-	if (retval)
-		return retval;
-
-    /* Fix for HW errata 9000373951: You can adjust the burst size and fill the
-     * level to minimize under-run possibilities. In the failing case, the
-     * transfer size was 96 bytes, the burst size was 16, and the fill
-     * threshold level was set to 2. Because of this, the Host core issued
-     * the Out token when it requested the second burst of data. If the
-     * burst size had been changed to 8, and the fill level set to 3,
-     * then the core would have pre-fetched the 96 bytes before issuing
-     * the OUT token.
-     */
-	burst_size = ehci_readl(ehci, &ehci->regs->reserved[1]);
-	burst_size = (burst_size & 0xffff00ff) | 0x4000;	/* TXPBURST */
-	ehci_writel(ehci, burst_size, &ehci->regs->reserved[1]);
-
-#else
-#if 1
-    /* Fix for HW errata 9000373951: You can adjust the burst size and fill the
-     * level to minimize under-run possibilities. In the failing case, the
-     * transfer size was 96 bytes, the burst size was 16, and the fill
-     * threshold level was set to 2. Because of this, the Host core issued
-     * the Out token when it requested the second burst of data. If the
-     * burst size had been changed to 8, and the fill level set to 3,
-     * then the core would have pre-fetched the 96 bytes before issuing
-     * the OUT token.
-     */
-	burst_size = ehci_readl(ehci, &ehci->regs->reserved2[1]);
-	burst_size = (burst_size & 0xffff00ff) | 0x4000;	/* TXPBURST */
-	ehci_writel(ehci, burst_size, &ehci->regs->reserved2[1]);
-
-	retval = ehci_run(hcd);
-	if (retval)
-		return retval;
-#endif
-#endif
-
 	return 0;
+}
+#else
+#define ci13612_fixup_usbcmd_rs(_ehci) (0)
+#endif
+
+
+#ifdef CONFIG_LSI_USB_SW_WORKAROUND
+/*
+ * ci13612_fixup_txpburst
+ *
+ * Fix for HW errata 9000373951: You can adjust the burst size and fill the
+ * level to minimize under-run possibilities. In the failing case, the transfer
+ * size was 96 bytes, the burst size was 16, and the fill threshold level was
+ * set to 2. Because of this, the Host core issued the Out token when it
+ * requested the second burst of data. If the burst size had been changed to 8,
+ * and the fill level set to 3, then the core would have pre-fetched the 96
+ * bytes before issuing the OUT token.
+ */
+static void
+ci13612_fixup_txpburst(struct ehci_hcd *ehci)
+{
+	unsigned burst_size;
+
+	burst_size = ehci_readl(ehci, &ehci->regs->reserved1[1]);
+	burst_size = (burst_size & 0xffff00ff) | 0x4000;	/* TXPBURST */
+	ehci_writel(ehci, burst_size, &ehci->regs->reserved1[1]);
+}
+#else
+#define ci13612_fixup_txpburst(ehci) do { (void)ehci; } while(0)
+#endif
+
+static int ci13612_ehci_run(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int retval;
+	u32 tmp;
+
+	retval = ci13612_fixup_usbcmd_rs(ehci);
+	if (retval)
+		return retval;
+
+
+#ifndef CONFIG_LSI_USB_SW_WORKAROUND
+	/* Setup AMBA interface to force INCR16 busts when possible */
+	writel(3, USB_SBUSCFG);
+#endif
+
+	retval = ehci_run(hcd);
+	if (retval)
+		return retval;
+
+	ci13612_fixup_txpburst(ehci);
+
+#ifndef CONFIG_LSI_USB_SW_WORKAROUND
+	/* Set ITC (bits [23:16]) to zero for interrupt on every micro-frame */
+	tmp = ehci_readl(ehci, &ehci->regs->command);
+	tmp &= 0xFFFF;
+	ehci_writel(ehci, tmp & 0xFFFF, &ehci->regs->command);
+#endif
+
+	return retval;
 }
 
 static const struct hc_driver ci13612_hc_driver = {
@@ -191,9 +212,9 @@ static const struct hc_driver ci13612_hc_driver = {
 	.product_desc		= "CI13612A EHCI USB Host Controller",
 	.hcd_priv_size		= sizeof(struct ehci_hcd),
 	.irq			= ehci_irq,
-	.flags			= HCD_MEMORY | HCD_USB2 | HCD_LOCAL_MEM,
+	.flags			= HCD_MEMORY | HCD_USB2,
 	.reset			= ci13612_ehci_init,
-	.start			= ehci_run_fix,
+	.start			= ci13612_ehci_run,
 	.stop			= ehci_stop,
 	.shutdown		= ehci_shutdown,
 	.urb_enqueue		= ehci_urb_enqueue,
@@ -212,46 +233,20 @@ static const struct hc_driver ci13612_hc_driver = {
 
 static int ci13612_ehci_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct usb_hcd *hcd;
-	const struct hc_driver *driver = &ci13612_hc_driver;
 	void __iomem *gpreg_base;
 	int irq;
 	int retval;
-	struct device_node *np = pdev->dev.of_node;
 	struct resource *res;
-
-#ifdef CONFIG_LSI_USB_SW_WORKAROUND
-
-      /* Check if device is enabled */
-	if (!of_device_is_available(np)) {
-		printk(KERN_INFO "%s: Port disabled via device-tree\n",
-			np->full_name);
-		return -ENODEV;
-	}
 
 	if (usb_disabled())
 		return -ENODEV;
 
-	/* Map the irq in the PPC476 to get the irq number */
 	irq = platform_get_irq(pdev, 0);
-
-	if (NO_IRQ == irq) {
+	if (irq < 0) {
 		dev_dbg(&pdev->dev, "error getting irq number\n");
-		retval = -EBUSY;
-		goto fail_create_hcd;
-	}
-
-	if (0 != irq_set_irq_type(87, IRQ_TYPE_LEVEL_HIGH)) {
-		dev_dbg(&pdev->dev, "set_irq_type() failed\n");
-		retval = -EBUSY;
-		goto fail_create_hcd;
-	}
-#else
-
-        irq = irq_of_parse_and_map(np, 0);
-	if (NO_IRQ == irq) {
-		dev_dbg(&pdev->dev, "error getting irq number\n");
-		retval = -EBUSY;
+		retval = irq;
 		goto fail_create_hcd;
 	}
 
@@ -261,9 +256,6 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		goto fail_create_hcd;
 	}
 
-#endif
-
-
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "Error: resource addr %s setup!\n",
@@ -271,12 +263,18 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	hcd = usb_create_hcd(driver, &pdev->dev, dev_name(&pdev->dev));
+
+#ifndef CONFIG_LSI_USB_SW_WORKAROUND
+	/* Device using 32-bit addressing */
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
+#endif
+
+	hcd = usb_create_hcd(&ci13612_hc_driver, &pdev->dev, dev_name(&pdev->dev));
 	if (!hcd) {
 		retval = -ENOMEM;
 		goto fail_create_hcd;
 	}
-
 
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = resource_size(res);
@@ -288,23 +286,22 @@ static int ci13612_ehci_probe(struct platform_device *pdev)
 		goto fail_put_hcd;
 	}
 
-
 	gpreg_base = of_iomap(np, 1);
 	if (!gpreg_base) {
 		dev_warn(&pdev->dev, "of_iomap error can't map region 1\n");
 		retval = -ENOMEM;
 		goto fail_put_hcd;
 	} else {
-		/* Setup GPREG for USB to enable the 6-bit address line */
+		/* Set address bits [39:32] to zero */
 		writel(0x0, gpreg_base + 0x8);
 #ifndef CONFIG_LSI_USB_SW_WORKAROUND
-		/* setup hprot for uncached USB mode */
-		writel(0x0, gpreg_base + 0x74);
+		/* hprot cachable and bufferable */
+		writel(0xc, gpreg_base + 0x74);
 #endif
 		iounmap(gpreg_base);
 	}
 
-	retval = usb_add_hcd(hcd, irq, IRQF_SHARED);
+	retval = usb_add_hcd(hcd, irq, 0);
 	if (retval == 0) {
 		platform_set_drvdata(pdev, hcd);
 		return retval;
@@ -329,9 +326,25 @@ static int ci13612_ehci_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int ci13612_ehci_halt (struct ehci_hcd *ehci)
+{
+	u32     temp;
+
+	temp = ehci_readl(ehci, &ehci->regs->command);
+	temp &= ~CMD_RUN;
+	ehci_writel(ehci, temp, &ehci->regs->command);
+
+	return handshake(ehci, &ehci->regs->status,
+		STS_HALT, STS_HALT, 16 * 125);
+}
+
 MODULE_ALIAS("platform:ci13612-ehci");
 
 static struct of_device_id ci13612_match[] = {
+	{
+		.type	= "usb",
+		.compatible = "lsi,acp-usb",
+	},
 	{
 		.type	= "usb",
 		.compatible = "acp-usb",
@@ -346,4 +359,5 @@ static struct platform_driver ci13612_ehci_driver = {
 		.name = "ci13612-ehci",
 		.of_match_table = ci13612_match,
 	},
+
 };
